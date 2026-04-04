@@ -26,3 +26,16 @@ p {
 .card p:last-child {
 	margin-bottom: 0;
 }
+
+footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+}
+
+footer strong {
+    color: #555;
+}
