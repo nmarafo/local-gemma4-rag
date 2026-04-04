@@ -18,7 +18,7 @@ This is a **privacy-first** document assistant that runs entirely in your browse
 3. **Zero Cost:** No API keys required.
 
 ### Technical Details:
-- **LLM:** `google/gemma-2b-it` (Quantized q4f16)
+- **LLM:** `google/gemma-4-E2B-it`
 - **Embeddings:** `Xenova/all-MiniLM-L6-v2`
 - **Vector DB:** Orama (Local WASM)
 - **Engine:** Transformers.js v3
