@@ -39,8 +39,11 @@ export class VectorDB {
 
     const results = await search(this.db, {
       mode: 'vector',
-      vector: vector,
-      similarity: 0.5, // Minimum similarity threshold
+      vector: {
+        value: vector,
+        property: 'embedding',
+      },
+      similarity: 0.5,
       limit: limit,
     });
 
