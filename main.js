@@ -160,8 +160,8 @@ async function handleChat() {
     ? results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n')
     : 'No relevant context found in local documents.';
 
-  // 3. Generate with LLM
-  prepareAIChat();
+  // 3. Generate with LLM (Pass sources to UI renderer)
+  prepareAIChat(results);
   worker.postMessage({ action: 'generate', payload: { prompt, context } });
 }
 
@@ -202,12 +202,37 @@ function appendUserMessage(text) {
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
-function prepareAIChat() {
+function prepareAIChat(sources = []) {
   currentChatResponse = document.createElement('div');
   currentChatResponse.className = 'message ai';
+  
+  let sourcesHtml = '';
+  if (sources.length > 0) {
+    const snippetsHtml = sources.map(s => `
+      <div class="source-snippet">
+        <span class="source-meta">${s.fileName} (Score: ${s.score.toFixed(2)})</span>
+        <div class="source-text">${s.text}</div>
+      </div>
+    `).join('');
+    
+    sourcesHtml = `
+      <div class="sources-container">
+        <button class="sources-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+          🔍 Show RAG Sources (${sources.length})
+        </button>
+        <div class="sources-content">
+          ${snippetsHtml}
+        </div>
+      </div>
+    `;
+  }
+
   currentChatResponse.innerHTML = `
     <div class="avatar">G4</div>
-    <div class="content"><em>Thinking...</em></div>
+    <div class="content-wrapper">
+        <div class="content"><em>Generating...</em></div>
+        ${sourcesHtml}
+    </div>
   `;
   chatHistory.appendChild(currentChatResponse);
   chatHistory.scrollTop = chatHistory.scrollHeight;

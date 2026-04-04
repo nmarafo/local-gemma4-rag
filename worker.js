@@ -57,13 +57,17 @@ async function initModels() {
   // 2. Load Gemma LLM
   generatorPipeline = await pipeline('text-generation', LLM_MODEL, {
     device: 'webgpu',
-    dtype: 'q4', // Quantized to 4-bit for speed/VRAM
+    dtype: 'q4',
     progress_callback: (p) => {
       if (p.status === 'progress') {
         self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } });
       }
     }
   });
+
+  // 3. GPU Warmup (compile shaders)
+  self.postMessage({ action: 'status', payload: { text: 'Warming up GPU...', progress: 95 } });
+  await generatorPipeline('warmup', { max_new_tokens: 1 });
 
   self.postMessage({ action: 'ready' });
 }
@@ -87,17 +91,14 @@ ${userPrompt}
 `;
 
   const output = await generatorPipeline(fullPrompt, {
-    max_new_tokens: 512,
-    temperature: 0.4, // Lower temperature for more factual RAG
-    do_sample: true,
-    return_full_text: false, // DO NOT return the prompt, only the new tokens
+    max_new_tokens: 256, // Reduced for faster responses
+    do_sample: false,   // Greedy decoding is MUCH faster on WebGPU
+    return_full_text: false,
     callback_function: (beams) => {
       const decoded = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, {
         skip_special_tokens: true,
       });
       
-      // In some cases, even with return_full_text: false, the callback might see the whole sequence.
-      // We'll handle that by only sending the part after the model turn start if needed.
       const modelTurnMarker = '<start_of_turn>model\n';
       const lastIndex = decoded.lastIndexOf(modelTurnMarker);
       const textToPush = lastIndex !== -1 ? decoded.substring(lastIndex + modelTurnMarker.length) : decoded;

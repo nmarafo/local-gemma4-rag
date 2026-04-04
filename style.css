@@ -338,6 +338,63 @@ h1 {
     transform: scale(1.05);
 }
 
+/* Sources UI */
+.sources-container {
+    margin-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 0.75rem;
+}
+
+.sources-toggle {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sources-toggle:hover {
+    background: var(--glass);
+    color: var(--text);
+}
+
+.sources-content {
+    display: none;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.sources-content.show {
+    display: block;
+}
+
+.source-snippet {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.source-snippet:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.source-meta {
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
 /* Footer */
 footer {
     margin-top: 4rem;
