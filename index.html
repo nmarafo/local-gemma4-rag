@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local RAG - Gemma WebGPU</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Local RAG with Gemma-4-E2B-it</h1>
+        <p>Private document chat powered by <strong>WebGPU</strong>.</p>
+
+        <div id="setup-container">
+            <div class="status-box">
+                <span id="status">Waiting to initialize...</span>
+                <div class="progress-container">
+                    <div id="progress-bar"></div>
+                </div>
+            </div>
+            <button id="init-btn">Load AI Models (~1.6GB)</button>
+        </div>
+
+        <div id="chat-container" class="hidden">
+            <div class="upload-section">
+                <input type="file" id="file-input" accept=".txt,.md,.js" multiple>
+                <p class="hint">Upload .txt or .md files to index them locally.</p>
+            </div>
+            
+            <div id="chat-history"></div>
+            
+            <div class="input-group">
+                <input type="text" id="user-input" placeholder="Ask about your documents...">
+                <button id="send-btn">Ask</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
