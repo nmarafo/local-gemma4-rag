@@ -3,6 +3,7 @@ import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transfo
 // Configure environment
 env.allowLocalModels = false;
 env.useBrowserCache = true;
+env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.2/dist/';
 
 let embeddingPipeline = null;
 let generatorPipeline = null;
