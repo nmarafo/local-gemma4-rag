@@ -402,6 +402,31 @@ footer {
     color: var(--text-muted);
     font-size: 0.9rem;
     padding-bottom: 2rem;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 2rem;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.social-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.social-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+.tech-stack {
+    font-size: 0.75rem;
+    opacity: 0.8;
 }
 
 footer strong {
