@@ -15,7 +15,7 @@ const sendBtn = document.getElementById('send-btn');
 const errorMessage = document.getElementById('error-message');
 
 // Worker Initialization
-const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+const worker = new Worker(new URL('./worker.js?v=401', import.meta.url), { type: 'module' });
 
 let isReady = false;
 let currentChatResponse = null;
