@@ -78,30 +78,51 @@ async function embedText(text) {
 }
 
 async function generateResponse(userPrompt, context) {
-  const fullPrompt = `<start_of_turn>user
+  // Gemma 4 / Gemma 2 Chat Template
+  const fullPrompt = `<|turn|>user
 Answer the question based ONLY on the following context. If the context does not contain the answer, say that you don't know.
 ---
 CONTEXT:
 ${context}
 ---
 QUESTION:
-${userPrompt}
-<end_of_turn>
-<start_of_turn>model
+${userPrompt}<turn|>
+<|turn|>model
 `;
 
   const output = await generatorPipeline(fullPrompt, {
-    max_new_tokens: 256, // Reduced for faster responses
-    do_sample: false,   // Greedy decoding is MUCH faster on WebGPU
+    max_new_tokens: 1024, // Reasoning models like Gemma 4 need space for "thinking"
+    do_sample: false,     // Faster for RAG
+    repetition_penalty: 1.2,
     return_full_text: false,
+    stop_sequences: ["<channel|>", "<turn|>", "<eos>", "<|turn|>"],
     callback_function: (beams) => {
       const decoded = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, {
         skip_special_tokens: true,
       });
       
-      const modelTurnMarker = '<start_of_turn>model\n';
-      const lastIndex = decoded.lastIndexOf(modelTurnMarker);
-      const textToPush = lastIndex !== -1 ? decoded.substring(lastIndex + modelTurnMarker.length) : decoded;
+      // Gemma 4 specific filtering:
+      // The model generates: thought [internal monologue] <|channel|> [actual text]
+      // Or simply starts with "thought" when configured to skip special tokens.
+      
+      let textToPush = decoded;
+      
+      // 1. Remove the turn/model markers if they leak
+      textToPush = textToPush.replace(/<\|turn\|>model\n/g, '');
+      
+      // 2. Filter internal reasoning/thought blocks
+      // These usually look like "thought [text]" at the start
+      if (textToPush.startsWith('thought')) {
+        // Look for the end of the thought block if special tokens skipped
+        // usually the model starts the real answer after a newline or specific marker
+        const parts = textToPush.split(/\n\n/); // Reasoning models often separate thought from answer with double newline
+        if (parts.length > 1) {
+            textToPush = parts.slice(1).join('\n\n');
+        } else {
+            // If still thinking, we send a subtle indicator or nothing yet
+            textToPush = '_Thinking..._'; 
+        }
+      }
       
       self.postMessage({ action: 'chunk', payload: { text: textToPush } });
     }
