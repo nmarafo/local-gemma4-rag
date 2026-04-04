@@ -3,42 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local RAG - Gemma WebGPU</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Gemma 4 | Private Local RAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Local RAG with Gemma-4-E2B-it</h1>
-        <p>Private document chat powered by <strong>WebGPU</strong>.</p>
+        <header>
+            <h1>Gemma 4 RAG</h1>
+            <p class="subtitle">Secure, local-first document chat powered by WebGPU & Orama</p>
+        </header>
 
-        <div id="setup-container">
-            <div class="status-box">
-                <span id="status">Waiting to initialize...</span>
-                <div class="progress-container">
-                    <div id="progress-bar"></div>
+        <main id="app">
+            <!-- Setup & Initialization -->
+            <div id="setup-container" class="card">
+                <div class="status-box">
+                    <h2 id="status-text">Initialize AI Engine</h2>
+                    <p class="status-label">Ready to load ~1.6GB of optimized models to your GPU</p>
+                </div>
+                
+                <div class="status-grid">
+                    <div class="status-item" id="status-embedding">
+                        <div class="status-label">Embedding Model</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-embedding" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-item" id="status-llm">
+                        <div class="status-label">Gemma 4 LLM</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-llm" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="init-btn">Initialize WebGPU AI</button>
+                <p id="error-message" style="color: #ef4444; margin-top: 1rem; display: none;"></p>
+            </div>
+
+            <!-- Chat & Upload Interface (Initially Hidden) -->
+            <div id="chat-container" class="hidden">
+                <!-- Upload Section -->
+                <div class="card" id="upload-card">
+                    <div class="upload-btn-wrapper">
+                        <div class="upload-btn-placeholder">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <p id="upload-status">Drop files here or click to index documents</p>
+                            <p class="hint" style="font-size: 0.75rem; margin-top: 0.5rem;">Supports .txt, .md, .js, .pdf (text-only)</p>
+                        </div>
+                        <input type="file" id="file-input" multiple />
+                    </div>
+                </div>
+
+                <!-- Chat History -->
+                <div class="card chat-card">
+                    <div id="chat-history">
+                        <div class="message ai">
+                            Hello! I am initialized and ready. Upload some documents to start our private conversation.
+                        </div>
+                    </div>
+                    
+                    <div class="input-area">
+                        <input type="text" id="user-input" placeholder="Ask a question about your documents..." autocomplete="off">
+                        <button id="send-btn">Send</button>
+                    </div>
                 </div>
             </div>
-            <button id="init-btn">Load AI Models (~1.6GB)</button>
-        </div>
-
-        <div id="chat-container" class="hidden">
-            <div class="upload-section">
-                <input type="file" id="file-input" accept=".txt,.md,.js" multiple>
-                <p class="hint">Upload .txt or .md files to index them locally.</p>
-            </div>
-            
-            <div id="chat-history"></div>
-            
-            <div class="input-group">
-                <input type="text" id="user-input" placeholder="Ask about your documents...">
-                <button id="send-btn">Ask</button>
-            </div>
-        </div>
+        </main>
 
         <footer>
-            <p>Sync via <strong>Antigravity</strong> &bull; Running on <strong>GitHub/Hugging Face</strong></p>
+            <p>Built with <strong>Transformers.js v3</strong> & <strong>Orama</strong> &bull; Synced by <strong>Antigravity</strong></p>
         </footer>
     </div>
+
+    <!-- Scripts -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
