@@ -1,4 +1,4 @@
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0-alpha.5';
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.0';
 
 // Configure environment
 env.allowLocalModels = false;
@@ -8,7 +8,7 @@ let embeddingPipeline = null;
 let generatorPipeline = null;
 
 const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
-const LLM_MODEL = 'google/gemma-4-E2B-it';
+const LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
 
 self.onmessage = async (e) => {
   const { action, payload } = e.data;
