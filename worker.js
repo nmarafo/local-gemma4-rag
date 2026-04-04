@@ -3,7 +3,11 @@ import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transfo
 // Configure environment
 env.allowLocalModels = false;
 env.useBrowserCache = true;
-env.backends.onnx.wasm.wasmPaths = './wasm/';
+
+// Define absolute path for local wasm hosting
+const baseUrl = self.location.origin + self.location.pathname.substring(0, self.location.pathname.lastIndexOf('/') + 1);
+env.backends.onnx.wasm.wasmPaths = baseUrl + 'wasm/';
+env.backends.onnx.wasm.proxy = false;
 
 let embeddingPipeline = null;
 let generatorPipeline = null;
