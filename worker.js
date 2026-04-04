@@ -3,7 +3,10 @@ import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transfo
 // Configure environment
 env.allowLocalModels = false;
 env.useBrowserCache = true;
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.2/dist/';
+env.backends.onnx.wasm.wasmPaths = {
+  'ort-wasm-simd-threaded.jsep.mjs': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort-wasm-simd-threaded.jsep.mjs',
+  'ort-wasm-simd-threaded.jsep.wasm': 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort-wasm-simd-threaded.jsep.wasm',
+};
 
 let embeddingPipeline = null;
 let generatorPipeline = null;
