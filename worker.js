@@ -78,51 +78,45 @@ async function embedText(text) {
 }
 
 async function generateResponse(userPrompt, context) {
-  // Gemma 4 / Gemma 2 Chat Template
-  const fullPrompt = `<|turn|>user
-Answer the question based ONLY on the following context. If the context does not contain the answer, say that you don't know.
----
-CONTEXT:
-${context}
----
-QUESTION:
-${userPrompt}<turn|>
-<|turn|>model
-`;
+  // Use official chat template
+  const messages = [
+    { 
+      role: 'user', 
+      content: `Answer based ONLY on the following context. If not found, say you don't know.\n\nCONTEXT:\n${context}\n\nQUESTION:\n${userPrompt}` 
+    }
+  ];
+
+  const fullPrompt = generatorPipeline.tokenizer.apply_chat_template(messages, {
+    tokenize: false,
+    add_generation_prompt: true,
+  });
 
   const output = await generatorPipeline(fullPrompt, {
-    max_new_tokens: 1024, // Reasoning models like Gemma 4 need space for "thinking"
-    do_sample: false,     // Faster for RAG
+    max_new_tokens: 1024,
+    do_sample: false,
     repetition_penalty: 1.2,
     return_full_text: false,
-    stop_sequences: ["<channel|>", "<turn|>", "<eos>", "<|turn|>"],
+    stop_sequences: ["<turn|>", "<channel|>", "<eos>", "<|turn|>"],
     callback_function: (beams) => {
       const decoded = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, {
         skip_special_tokens: true,
       });
       
-      // Gemma 4 specific filtering:
-      // The model generates: thought [internal monologue] <|channel|> [actual text]
-      // Or simply starts with "thought" when configured to skip special tokens.
-      
       let textToPush = decoded;
       
-      // 1. Remove the turn/model markers if they leak
-      textToPush = textToPush.replace(/<\|turn\|>model\n/g, '');
-      
-      // 2. Filter internal reasoning/thought blocks
-      // These usually look like "thought [text]" at the start
-      if (textToPush.startsWith('thought')) {
-        // Look for the end of the thought block if special tokens skipped
-        // usually the model starts the real answer after a newline or specific marker
-        const parts = textToPush.split(/\n\n/); // Reasoning models often separate thought from answer with double newline
+      // Filter reasoning/thought blocks (Gemma 4 specific)
+      // The model often starts with "thought\n..."
+      if (textToPush.includes('thought')) {
+        const parts = textToPush.split(/\n\n/);
         if (parts.length > 1) {
             textToPush = parts.slice(1).join('\n\n');
         } else {
-            // If still thinking, we send a subtle indicator or nothing yet
-            textToPush = '_Thinking..._'; 
+            textToPush = '_Thinking..._';
         }
       }
+
+      // Cleanup any leaked turn markers (should be handled by stop_sequences but just in case)
+      textToPush = textToPush.replace(/<\|turn\|>model\n/g, '').replace(/<turn\|>/g, '');
       
       self.postMessage({ action: 'chunk', payload: { text: textToPush } });
     }
