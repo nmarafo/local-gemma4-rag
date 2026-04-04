@@ -13,12 +13,14 @@ const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const errorMessage = document.getElementById('error-message');
+const docsList = document.getElementById('docs-list');
 
-// Worker Initialization
+// Worker Initialization (with Cache Buster)
 const worker = new Worker(new URL('./worker.js?v=401', import.meta.url), { type: 'module' });
 
 let isReady = false;
 let currentChatResponse = null;
+let indexedFiles = new Set();
 
 // Initialization
 initBtn.onclick = () => {
@@ -55,6 +57,10 @@ worker.onmessage = async (e) => {
       finalizeAIChat(payload.text);
       break;
 
+    case 'status':
+      statusText.innerText = payload.text;
+      break;
+
     case 'error':
       errorMessage.innerText = payload.message;
       errorMessage.style.display = 'block';
@@ -71,19 +77,68 @@ fileInput.onchange = async (e) => {
   uploadStatus.innerText = 'Processing files... ⏳';
   
   for (const file of files) {
-    const text = await file.text();
-    const chunks = chunkText(text, 500, 100);
-    
-    for (const chunk of chunks) {
-      // Request embedding from worker
-      const vector = await requestEmbedding(chunk);
-      await db.addDocument(chunk, file.name, vector);
+    try {
+      const text = await extractText(file);
+      if (!text || text.trim().length < 10) {
+        console.warn(`Empty or too short content for ${file.name}`);
+        continue;
+      }
+
+      const chunks = chunkText(text, 1000, 200);
+      
+      for (const chunk of chunks) {
+        const vector = await requestEmbedding(chunk);
+        await db.addDocument(chunk, file.name, vector);
+      }
+
+      addToFileList(file.name);
+    } catch (err) {
+      console.error(`Error processing ${file.name}:`, err);
     }
   }
 
   uploadStatus.innerText = 'Indexing complete! 🎉 Ask away.';
   setTimeout(() => uploadStatus.innerText = 'Drop more files if needed', 3000);
 };
+
+async function extractText(file) {
+  if (file.type === 'application/pdf') {
+    return await extractPdfText(file);
+  } else {
+    // Default to text (TXT, MD, JS, etc.)
+    return await file.text();
+  }
+}
+
+async function extractPdfText(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = '';
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const strings = content.items.map(item => item.str);
+    fullText += strings.join(' ') + '\n';
+  }
+  return fullText;
+}
+
+function addToFileList(fileName) {
+  if (indexedFiles.has(fileName)) return;
+  indexedFiles.add(fileName);
+  
+  const sidebarHint = document.querySelector('#sidebar .hint');
+  if (sidebarHint) sidebarHint.remove();
+
+  const li = document.createElement('li');
+  li.className = 'doc-item';
+  li.innerHTML = `
+    <span class="doc-icon">📄</span>
+    <span class="doc-name">${fileName}</span>
+  `;
+  docsList.appendChild(li);
+}
 
 // Chat Interaction
 sendBtn.onclick = handleChat;
@@ -100,8 +155,10 @@ async function handleChat() {
   const queryVector = await requestEmbedding(prompt);
 
   // 2. Retrieve Context from Orama
-  const results = await db.query(queryVector, 3);
-  const context = results.map(r => `[From ${r.fileName}]: ${r.text}`).join('\n---\n');
+  const results = await db.query(queryVector, 5);
+  const context = results.length > 0 
+    ? results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n')
+    : 'No relevant context found in local documents.';
 
   // 3. Generate with LLM
   prepareAIChat();
@@ -112,6 +169,10 @@ async function handleChat() {
 function chunkText(text, size, overlap) {
   const chunks = [];
   for (let i = 0; i < text.length; i += size - overlap) {
+    if (i + size > text.length) {
+      chunks.push(text.slice(i));
+      break;
+    }
     chunks.push(text.slice(i, i + size));
   }
   return chunks;
@@ -133,7 +194,10 @@ function requestEmbedding(text) {
 function appendUserMessage(text) {
   const div = document.createElement('div');
   div.className = 'message user';
-  div.innerText = text;
+  div.innerHTML = `
+    <div class="avatar">U</div>
+    <div class="content">${text}</div>
+  `;
   chatHistory.appendChild(div);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
@@ -141,22 +205,26 @@ function appendUserMessage(text) {
 function prepareAIChat() {
   currentChatResponse = document.createElement('div');
   currentChatResponse.className = 'message ai';
-  currentChatResponse.innerHTML = '<em>Thinking...</em>';
+  currentChatResponse.innerHTML = `
+    <div class="avatar">G4</div>
+    <div class="content"><em>Thinking...</em></div>
+  `;
   chatHistory.appendChild(currentChatResponse);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
 
 function updateAIChat(text) {
   if (currentChatResponse) {
-    // We use marked for rendering if available
-    currentChatResponse.innerHTML = window.marked ? window.marked.parse(text) : text;
+    const contentDiv = currentChatResponse.querySelector('.content');
+    contentDiv.innerHTML = window.marked ? window.marked.parse(text) : text;
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 }
 
 function finalizeAIChat(text) {
   if (currentChatResponse) {
-    currentChatResponse.innerHTML = window.marked ? window.marked.parse(text) : text;
+    const contentDiv = currentChatResponse.querySelector('.content');
+    contentDiv.innerHTML = window.marked ? window.marked.parse(text) : text;
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 }

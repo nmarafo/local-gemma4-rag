@@ -75,24 +75,34 @@ async function embedText(text) {
 
 async function generateResponse(userPrompt, context) {
   const fullPrompt = `<start_of_turn>user
-Answer the question based ONLY on the following context:
+Answer the question based ONLY on the following context. If the context does not contain the answer, say that you don't know.
 ---
+CONTEXT:
 ${context}
 ---
-Question: ${userPrompt}
+QUESTION:
+${userPrompt}
 <end_of_turn>
 <start_of_turn>model
 `;
 
   const output = await generatorPipeline(fullPrompt, {
-    max_new_tokens: 256,
-    temperature: 0.7,
+    max_new_tokens: 512,
+    temperature: 0.4, // Lower temperature for more factual RAG
     do_sample: true,
+    return_full_text: false, // DO NOT return the prompt, only the new tokens
     callback_function: (beams) => {
       const decoded = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, {
         skip_special_tokens: true,
       });
-      self.postMessage({ action: 'chunk', payload: { text: decoded } });
+      
+      // In some cases, even with return_full_text: false, the callback might see the whole sequence.
+      // We'll handle that by only sending the part after the model turn start if needed.
+      const modelTurnMarker = '<start_of_turn>model\n';
+      const lastIndex = decoded.lastIndexOf(modelTurnMarker);
+      const textToPush = lastIndex !== -1 ? decoded.substring(lastIndex + modelTurnMarker.length) : decoded;
+      
+      self.postMessage({ action: 'chunk', payload: { text: textToPush } });
     }
   });
 
