@@ -6,6 +6,9 @@ colorTo: gray
 sdk: static
 pinned: false
 header: mini
+models:
+  - onnx-community/gemma-4-E2B-it-ONNX
+  - Xenova/all-MiniLM-L6-v2
 ---
 
 # 🛡️ Local RAG with Gemma 2B & WebGPU
@@ -20,10 +23,6 @@ This is a **privacy-first** document assistant that runs entirely in your browse
 ### Technical Details:
 - **Engine:** Transformers.js v4 (WebGPU)
 - **Vector DB:** Orama v2 (Local WASM)
-
-models:
-  - onnx-community/gemma-4-E2B-it-ONNX
-  - Xenova/all-MiniLM-L6-v2
 
 ### Hardware Requirements:
 You need a **WebGPU-compatible browser** (Chrome 113+, Edge, or Safari 17.4+) and a dedicated or integrated GPU.
