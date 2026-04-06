@@ -621,6 +621,9 @@
                     self.postMessage({ action: 'embed_result', payload: { vector: Array.from(output.data) } });
                 } else if (action === 'generate') {
                     await generateResponse(payload.prompt, payload.context);
+                } else if (action === 'cleanup') {
+                    if (generatorPipeline) await generatorPipeline.dispose();
+                    if (embeddingPipeline) await embeddingPipeline.dispose();
                 }
             };
 
@@ -701,6 +704,13 @@
             statusText.innerText = 'Starting WebGPU...';
             worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
         };
+
+        window.addEventListener('beforeunload', () => {
+            if (worker) {
+                worker.postMessage({ action: 'cleanup' });
+                worker.terminate();
+            }
+        });
 
         clearChatBtn.onclick = () => {
             if (confirm('Clear chat?')) chatHistory.innerHTML = '<div class="message ai"><div class="avatar">G4</div><div class="content">Cleared!</div></div>';

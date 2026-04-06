@@ -32,6 +32,14 @@ initBtn.onclick = () => {
   worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
 };
 
+// Graceful Cleanup
+window.addEventListener('beforeunload', () => {
+  if (worker) {
+    worker.postMessage({ action: 'cleanup' });
+    worker.terminate();
+  }
+});
+
 clearChatBtn.onclick = () => {
   if (confirm('Clear all messages?')) {
     chatHistory.innerHTML = `

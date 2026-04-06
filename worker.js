@@ -28,8 +28,23 @@ self.onmessage = async (e) => {
     self.postMessage({ action: 'embed_result', payload: { vector } });
   } else if (action === 'generate') {
     await generateResponse(payload.prompt, payload.context);
+  } else if (action === 'cleanup') {
+    await cleanup();
   }
 };
+
+async function cleanup() {
+  self.postMessage({ action: 'status', payload: { text: 'Disposing AI models...' } });
+  if (generatorPipeline) {
+    await generatorPipeline.dispose();
+    generatorPipeline = null;
+  }
+  if (embeddingPipeline) {
+    await embeddingPipeline.dispose();
+    embeddingPipeline = null;
+  }
+  self.postMessage({ action: 'status', payload: { text: 'Memory cleared.' } });
+}
 
 async function initModels() {
   const modelName = CURRENT_LLM_MODEL.split('/').pop().replace('-ONNX', '');
