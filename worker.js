@@ -9,38 +9,31 @@ const baseUrl = self.location.origin + self.location.pathname.substring(0, self.
 env.backends.onnx.wasm.wasmPaths = baseUrl + 'wasm/';
 env.backends.onnx.wasm.proxy = false;
 
-let embeddingPipeline = null;
 let generatorPipeline = null;
+let embeddingPipeline = null;
 
 const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
-const LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
+let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX'; // Default
 
 self.onmessage = async (e) => {
   const { action, payload } = e.data;
 
-  try {
-    switch (action) {
-      case 'init':
-        await initModels();
-        break;
-      case 'embed':
-        const vector = await embedText(payload.text);
-        self.postMessage({ action: 'embed_result', payload: { vector } });
-        break;
-      case 'generate':
-        await generateResponse(payload.prompt, payload.context);
-        break;
-      default:
-        console.warn('Unknown worker action:', action);
+  if (action === 'init') {
+    if (payload && payload.modelId) {
+        CURRENT_LLM_MODEL = payload.modelId;
     }
-  } catch (error) {
-    self.postMessage({ action: 'error', payload: { message: error.message } });
-    console.error('Worker error:', error);
+    await initModels();
+  } else if (action === 'embed') {
+    const vector = await embedText(payload.text);
+    self.postMessage({ action: 'embed_result', payload: { vector } });
+  } else if (action === 'generate') {
+    await generateResponse(payload.prompt, payload.context);
   }
 };
 
 async function initModels() {
-  self.postMessage({ action: 'status', payload: { text: 'Loading AI Models...', progress: 0 } });
+  const modelName = CURRENT_LLM_MODEL.split('/').pop().replace('-ONNX', '');
+  self.postMessage({ action: 'status', payload: { text: `Loading Embedding Model...`, progress: 0 } });
 
   // 1. Load Embedding Model
   embeddingPipeline = await pipeline('feature-extraction', EMBEDDING_MODEL, {
@@ -52,10 +45,10 @@ async function initModels() {
     }
   });
 
-  self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4 (1.6GB)...', progress: 50 } });
+  self.postMessage({ action: 'status', payload: { text: `Loading ${modelName}...`, progress: 50 } });
 
-  // 2. Load Gemma LLM
-  generatorPipeline = await pipeline('text-generation', LLM_MODEL, {
+  // 2. Load Selected Gemma LLM
+  generatorPipeline = await pipeline('text-generation', CURRENT_LLM_MODEL, {
     device: 'webgpu',
     dtype: 'q4',
     progress_callback: (p) => {

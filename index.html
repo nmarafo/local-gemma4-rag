@@ -65,6 +65,15 @@
                     </div>
                 </div>
 
+                <div class="model-selector-container">
+                    <label for="model-select" class="status-label">Select Model Variant:</label>
+                    <select id="model-select" class="glass-select">
+                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
+                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
+                    </select>
+                    <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B variant requires significant GPU memory (~4GB download).</p>
+                </div>
+
                 <button id="init-btn" class="primary-btn">Initialize WebGPU AI</button>
                 <p id="error-message" class="error-text" style="display: none;"></p>
             </div>

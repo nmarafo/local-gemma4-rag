@@ -116,6 +116,39 @@ h1 {
     box-shadow: 0 0 10px rgba(187, 139, 255, 0.5);
 }
 
+.model-selector-container {
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.glass-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 0.95rem;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23bb8bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2rem;
+}
+
+.glass-select:focus {
+    border-color: var(--accent);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.glass-select option {
+    background: #1e293b;
+    color: #fff;
+}
+
 .primary-btn {
     background: var(--accent);
     color: #fff;

@@ -21,12 +21,14 @@ const worker = new Worker(new URL('./worker.js?v=401', import.meta.url), { type:
 let isReady = false;
 let currentChatResponse = null;
 let indexedFiles = new Set();
+const modelSelect = document.getElementById('model-select');
 
 // Initialization
 initBtn.onclick = () => {
   initBtn.disabled = true;
+  modelSelect.disabled = true;
   statusText.innerText = 'Initializing WebGPU Engine...';
-  worker.postMessage({ action: 'init' });
+  worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
 };
 
 // Worker Communication
