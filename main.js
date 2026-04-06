@@ -126,18 +126,44 @@ async function extractPdfText(file) {
   return fullText;
 }
 
+window.deleteDocument = async (fileName) => {
+  if (!confirm(`Are you sure you want to remove ${fileName} from the index?`)) return;
+  
+  try {
+    await db.removeDocumentsByFileName(fileName);
+    indexedFiles.delete(fileName);
+    
+    // Update UI
+    const item = Array.from(docsList.children).find(li => li.dataset.name === fileName);
+    if (item) item.remove();
+    
+    if (indexedFiles.size === 0) {
+      docsList.innerHTML = '<p class="hint">No documents indexed yet.</p>';
+    }
+    
+    console.log(`Document ${fileName} removed successfully.`);
+  } catch (err) {
+    console.error('Error deleting document:', err);
+  }
+};
+
 function addToFileList(fileName) {
   if (indexedFiles.has(fileName)) return;
-  indexedFiles.add(fileName);
   
-  const sidebarHint = document.querySelector('#sidebar .hint');
+  const sidebarHint = docsList.querySelector('.hint');
   if (sidebarHint) sidebarHint.remove();
 
+  indexedFiles.add(fileName);
+  
   const li = document.createElement('li');
   li.className = 'doc-item';
+  li.dataset.name = fileName;
   li.innerHTML = `
     <span class="doc-icon">📄</span>
     <span class="doc-name">${fileName}</span>
+    <button class="remove-btn" onclick="deleteDocument('${fileName}')" title="Remove from index">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
   `;
   docsList.appendChild(li);
 }

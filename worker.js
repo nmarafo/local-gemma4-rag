@@ -72,10 +72,16 @@ async function embedText(text) {
 
 async function generateResponse(userPrompt, context) {
   // Use official chat template
+  const isGeneralKnowledge = !context || context === 'No relevant context found in local documents.';
+  
+  const systemInstruction = isGeneralKnowledge 
+    ? "Act as a helpful AI assistant. Answer using your own knowledge."
+    : `Answer based on the following context. If the answer is not in the context, you MAY use your own knowledge but clearly state that the information was not found in the documents.\n\nCONTEXT:\n${context}`;
+
   const messages = [
     { 
       role: 'user', 
-      content: `Answer based ONLY on the following context. If not found, say you don't know.\n\nCONTEXT:\n${context}\n\nQUESTION:\n${userPrompt}` 
+      content: `${systemInstruction}\n\nQUESTION:\n${userPrompt}` 
     }
   ];
 

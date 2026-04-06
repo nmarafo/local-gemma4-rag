@@ -1,4 +1,4 @@
-import { create, insert, search } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+import { create, insert, search, removeMultiple } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
 
 export class VectorDB {
   constructor() {
@@ -32,6 +32,25 @@ export class VectorDB {
       fileName,
       embedding,
     });
+  }
+
+  async removeDocumentsByFileName(fileName) {
+    if (!this.isInitialized) await this.init();
+
+    // 1. Search for all documents with this filename
+    const results = await search(this.db, {
+      where: {
+        fileName: fileName
+      },
+      limit: 1000 // A single file likely won't have more than 1000 chunks
+    });
+
+    const ids = results.hits.map(hit => hit.id);
+    if (ids.length > 0) {
+      await removeMultiple(this.db, ids);
+      console.log(`🗑️ Removed ${ids.length} chunks for ${fileName}`);
+    }
+    return ids.length;
   }
 
   async query(vector, limit = 5) {

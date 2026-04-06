@@ -218,6 +218,30 @@ h1 {
     border-color: var(--glass-border);
 }
 
+.doc-item .remove-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-item:hover .remove-btn {
+    opacity: 1;
+}
+
+.doc-item .remove-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
 .doc-icon {
     color: var(--accent);
 }
