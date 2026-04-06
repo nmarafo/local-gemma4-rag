@@ -645,33 +645,46 @@
             }
 
             async function generateResponse(userPrompt, context) {
-                const isGeneral = !context || context.includes('No relevant context');
-                const sys = isGeneral ? "Act as a helpful AI assistant." : "Answer based on context. \\n\\n" + context;
-                const messages = [{ role: 'user', content: sys + "\\n\\nQUESTION: " + userPrompt }];
-                const prompt = generatorPipeline.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
+                try {
+                    const isGeneral = !context || context.includes('No relevant context');
+                    const sys = isGeneral ? "Act as a helpful AI assistant." : "Answer based on context. \\n\\n" + context;
+                    const messages = [{ role: 'user', content: sys + "\\n\\nQUESTION: " + userPrompt }];
+                    
+                    const inputs = await generatorPipeline.tokenizer.apply_chat_template(messages, { 
+                        tokenize: true, 
+                        add_generation_prompt: true,
+                        return_dict: true 
+                    });
+                    
+                    const promptLength = inputs.input_ids.size;
+                    const decodedPrompt = generatorPipeline.tokenizer.decode(inputs.input_ids.data, { skip_special_tokens: true });
 
-                const output = await generatorPipeline(prompt, {
-                    max_new_tokens: 1024, do_sample: false, repetition_penalty: 1.2,
-                    stop_sequences: ["<turn|>", "<|turn|>", "<eos>"],
-                    callback_function: (beams) => {
-                        let text = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, { skip_special_tokens: true });
-                        
-                        // Robust Reasoning Filter
-                        if (text.toLowerCase().includes('thought')) {
-                            const thoughtParts = text.split(/\\n\\n|Answer:/i);
-                            if (thoughtParts.length > 1) {
-                                text = thoughtParts.slice(1).join('\\n\\n').trim();
-                            } else {
-                                text = "_Thinking..._";
+                    const output = await generatorPipeline(inputs, {
+                        max_new_tokens: 1024, do_sample: false, repetition_penalty: 1.2,
+                        stop_sequences: ["<turn|>", "<|turn|>", "<eos>"],
+                        callback_function: (beams) => {
+                            const fullText = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, { skip_special_tokens: true });
+                            let responseText = fullText.slice(decodedPrompt.length).trim();
+                            
+                            // 🧠 Reasoning Filter
+                            if (responseText.toLowerCase().includes('thought')) {
+                                const parts = responseText.split(/\\n\\n|Answer:/i);
+                                responseText = parts.length > 1 ? parts.slice(1).join('\\n\\n').trim() : "_Thinking..._";
+                            }
+
+                            if (responseText) {
+                                // Remove any leftover special tokens like <|turn|>
+                                responseText = responseText.replace(/<\\\\|?turn\\\\|?>/g, '').replace(/<turn\|>/g, '');
+                                self.postMessage({ action: 'chunk', payload: { text: responseText } });
                             }
                         }
-
-                        if (text) {
-                            self.postMessage({ action: 'chunk', payload: { text: text.replace(/<\\|?turn\\|?>/g, '') } });
-                        }
-                    }
-                });
-                self.postMessage({ action: 'generate_complete', payload: { text: output[0].generated_text } });
+                    });
+                    
+                    self.postMessage({ action: 'generate_complete', payload: { text: output[0].generated_text } });
+                } catch (err) {
+                    console.error("Worker Generation Error:", err);
+                    self.postMessage({ action: 'chunk', payload: { text: "⚠️ Error during generation: " + err.message } });
+                }
             }
         `;
 
