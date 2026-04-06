@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma 4 Standalone | Private Local RAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Essential Libraries (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        // Set worker for pdf.js (CDN)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // Configure marked with highlight.js
+        window.marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            gfm: true,
+            breaks: true
+        });
+    </script>
+
+    <style>
+        :root {
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --accent: #bb8bff;
+            --accent-hover: #a370f7;
+            --bg: #0f1115;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(30, 41, 59, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f1115 100%);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            margin-bottom: 1.5rem;
+        }
+
+        .card.glass {
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        #setup-container {
+            max-width: 600px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-align: left;
+        }
+
+        .progress-bar-container {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #7c3aed, var(--accent));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(187, 139, 255, 0.5);
+        }
+
+        .model-selector-container {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .glass-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 0.95rem;
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23bb8bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2rem;
+        }
+
+        .glass-select option {
+            background: #1e293b;
+            color: #fff;
+        }
+
+        .primary-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .primary-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(187, 139, 255, 0.3);
+        }
+
+        .primary-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #chat-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #sidebar {
+            height: fit-content;
+            padding: 1.5rem;
+        }
+
+        #sidebar h3 {
+            margin-bottom: 1.2rem;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+
+        #docs-list {
+            list-style: none;
+        }
+
+        .doc-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .doc-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--glass-border);
+        }
+
+        .doc-item .remove-btn {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .doc-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .doc-item .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .upload-btn-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+            border: 2px dashed var(--glass-border);
+            border-radius: 15px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .chat-card {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+            max-height: 700px;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        #clear-chat-btn {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            max-width: 85%;
+            position: relative;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: var(--accent);
+        }
+
+        .message .content {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.25rem 1.5rem;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            word-break: break-word;
+        }
+
+        .message.user .content {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0;
+            right: -35px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            padding: 4px;
+        }
+
+        .message.ai:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .input-area {
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 1rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .input-area input {
+            flex-grow: 1;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            color: #fff;
+            outline: none;
+        }
+
+        .input-area button {
+            background: var(--accent);
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .sources-container {
+            margin-top: 1rem;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 0.75rem;
+        }
+
+        .sources-toggle {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .sources-content {
+            display: none;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .sources-content.show {
+            display: block;
+        }
+
+        .source-meta {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        footer {
+            margin-top: 4rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            padding-bottom: 2rem;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 2rem;
+        }
+
+        .tech-stack {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .error-text {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>Gemma 4 RAG (Standalone)</h1>
+                <p class="subtitle">Secure, local-first document chat via WebGPU</p>
+            </div>
+        </header>
+
+        <main id="app">
+            <div id="setup-container" class="card glass">
+                <div class="status-box">
+                    <h2 id="status-text">Initialize AI Engine</h2>
+                    <p class="status-label">Download happens 100% in-browser. Models are cached locally.</p>
+                </div>
+                
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-label">Embedding (MiniLM-L6)</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-embedding" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">Gemma 4 (Q4_K_M)</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-llm" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-selector-container">
+                    <label for="model-select" class="status-label">Select Model Variant:</label>
+                    <select id="model-select" class="glass-select">
+                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
+                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
+                    </select>
+                </div>
+
+                <button id="init-btn" class="primary-btn">Initialize WebGPU AI</button>
+                <p id="error-message" class="error-text" style="display: none;"></p>
+            </div>
+
+            <div id="chat-container" class="hidden">
+                <aside id="sidebar" class="card glass">
+                    <h3>Indexed Documents</h3>
+                    <div id="docs-list-container">
+                        <ul id="docs-list">
+                            <p class="hint">No documents indexed yet.</p>
+                        </ul>
+                    </div>
+                </aside>
+
+                <div class="chat-main">
+                    <div class="card glass" id="upload-card">
+                        <div class="upload-btn-placeholder" id="drop-zone">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <p id="upload-status">Drop files or click to index</p>
+                        </div>
+                        <input type="file" id="file-input" multiple accept=".txt,.md,.pdf" style="display: none;">
+                    </div>
+
+                    <div class="card glass chat-card">
+                        <div class="chat-header">
+                            <h3>Conversation</h3>
+                            <button id="clear-chat-btn">🗑️ Clear Chat</button>
+                        </div>
+                        <div id="chat-history">
+                            <div class="message ai">
+                                <div class="avatar">G4</div>
+                                <div class="content">Hello! Everything is running locally in this single file. Upload docs to start RAG.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="input-area">
+                            <input type="text" id="user-input" placeholder="Ask a question..." autocomplete="off">
+                            <button id="send-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Created by <strong>Norberto Martín Afonso</strong> &bull; Standalone Version</p>
+            <p class="tech-stack">Transformers.js v4 &bull; Orama v2 &bull; WebGPU</p>
+        </footer>
+    </div>
+
+    <!-- MAIN APP SCRIPT -->
+    <script type="module">
+        // --- MULTI-MODULE CONSOLIDATION ---
+        import { create, insert, search, removeMultiple } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+
+        // 1. Vector DB Implementation (Inlined from db.js)
+        class VectorDB {
+            constructor() { this.db = null; this.isInitialized = false; }
+            async init() {
+                if (this.isInitialized) return;
+                this.db = await create({
+                    schema: { text: 'string', fileName: 'string', embedding: 'vector[384]' },
+                    indexStyles: { embedding: 'cosine' }
+                });
+                this.isInitialized = true;
+                console.log('📦 Standalone Vector DB ready');
+            }
+            async addDocument(text, fileName, embedding) {
+                if (!this.isInitialized) await this.init();
+                return await insert(this.db, { text, fileName, embedding });
+            }
+            async removeDocumentsByFileName(fileName) {
+                const results = await search(this.db, { where: { fileName: fileName }, limit: 1000 });
+                const ids = results.hits.map(hit => hit.id);
+                if (ids.length > 0) await removeMultiple(this.db, ids);
+                return ids.length;
+            }
+            async query(vector, limit = 5) {
+                const results = await search(this.db, {
+                    mode: 'vector',
+                    vector: { value: vector, property: 'embedding' },
+                    similarity: 0.5,
+                    limit
+                });
+                return results.hits.map(hit => ({ text: hit.document.text, fileName: hit.document.fileName, score: hit.score }));
+            }
+        }
+        const db = new VectorDB();
+
+        // 2. Worker Logic (Inlined from worker.js)
+        const workerBlobCode = `
+            import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1';
+            
+            env.allowLocalModels = false;
+            env.useBrowserCache = true;
+            
+            let generatorPipeline = null;
+            let embeddingPipeline = null;
+            let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
+
+            self.onmessage = async (e) => {
+                const { action, payload } = e.data;
+                if (action === 'init') {
+                    if (payload?.modelId) CURRENT_LLM_MODEL = payload.modelId;
+                    await initModels();
+                } else if (action === 'embed') {
+                    const output = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
+                    self.postMessage({ action: 'embed_result', payload: { vector: Array.from(output.data) } });
+                } else if (action === 'generate') {
+                    await generateResponse(payload.prompt, payload.context);
+                }
+            };
+
+            async function initModels() {
+                self.postMessage({ action: 'status', payload: { text: 'Loading Embedding Model...' } });
+                embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
+                    device: 'webgpu',
+                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'embedding', progress: p.progress } }); }
+                });
+
+                self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4...' } });
+                generatorPipeline = await pipeline('text-generation', CURRENT_LLM_MODEL, { 
+                    device: 'webgpu', dtype: 'q4',
+                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } }); }
+                });
+
+                await generatorPipeline('warmup', { max_new_tokens: 1 });
+                self.postMessage({ action: 'ready' });
+            }
+
+            async function generateResponse(userPrompt, context) {
+                const isGeneral = !context || context.includes('No relevant context');
+                const sys = isGeneral ? "Act as a helpful AI assistant." : "Answer based on context. \\n\\n" + context;
+                const messages = [{ role: 'user', content: sys + "\\n\\nQUESTION: " + userPrompt }];
+                const prompt = generatorPipeline.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
+
+                const output = await generatorPipeline(prompt, {
+                    max_new_tokens: 1024, do_sample: false, repetition_penalty: 1.2,
+                    stop_sequences: ["<turn|>", "<|turn|>", "<eos>"],
+                    callback_function: (beams) => {
+                        let text = generatorPipeline.tokenizer.decode(beams[0].output_token_ids, { skip_special_tokens: true });
+                        
+                        // Robust Reasoning Filter
+                        if (text.toLowerCase().includes('thought')) {
+                            const thoughtParts = text.split(/\\n\\n|Answer:/i);
+                            if (thoughtParts.length > 1) {
+                                text = thoughtParts.slice(1).join('\\n\\n').trim();
+                            } else {
+                                text = "_Thinking..._";
+                            }
+                        }
+
+                        if (text) {
+                            self.postMessage({ action: 'chunk', payload: { text: text.replace(/<\\|?turn\\|?>/g, '') } });
+                        }
+                    }
+                });
+                self.postMessage({ action: 'generate_complete', payload: { text: output[0].generated_text } });
+            }
+        `;
+
+        const blob = new Blob([workerBlobCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
+
+        // 3. UI Logic (Modified from main.js)
+        const setupContainer = document.getElementById('setup-container');
+        const chatContainer = document.getElementById('chat-container');
+        const initBtn = document.getElementById('init-btn');
+        const statusText = document.getElementById('status-text');
+        const progressEmbedding = document.getElementById('progress-embedding');
+        const progressLLM = document.getElementById('progress-llm');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const uploadStatus = document.getElementById('upload-status');
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const docsList = document.getElementById('docs-list');
+        const modelSelect = document.getElementById('model-select');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+
+        let isReady = false;
+        let currentChatResponse = null;
+        let indexedFiles = new Set();
+
+        initBtn.onclick = () => {
+            initBtn.disabled = true; modelSelect.disabled = true;
+            statusText.innerText = 'Starting WebGPU...';
+            worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
+        };
+
+        clearChatBtn.onclick = () => {
+            if (confirm('Clear chat?')) chatHistory.innerHTML = '<div class="message ai"><div class="avatar">G4</div><div class="content">Cleared!</div></div>';
+        };
+
+        worker.onmessage = async (e) => {
+            const { action, payload } = e.data;
+            if (action === 'progress') {
+                if (payload.model === 'embedding') progressEmbedding.style.width = `${payload.progress}%`;
+                else progressLLM.style.width = `${payload.progress}%`;
+            } else if (action === 'status') statusText.innerText = payload.text;
+            else if (action === 'ready') { isReady = true; setupContainer.classList.add('hidden'); chatContainer.classList.remove('hidden'); await db.init(); }
+            else if (action === 'chunk') updateAIChat(payload.text);
+            else if (action === 'generate_complete') finalizeAIChat(payload.text);
+        };
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = async (e) => {
+            const files = e.target.files; if (!files.length) return;
+            uploadStatus.innerText = 'Indexing...';
+            for (const file of files) {
+                const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
+                const chunks = chunkText(text, 1000, 200);
+                for (const chunk of chunks) {
+                    const vector = await requestEmbedding(chunk);
+                    await db.addDocument(chunk, file.name, vector);
+                }
+                addToFileList(file.name);
+            }
+            uploadStatus.innerText = 'Indexed! 🎉';
+        };
+
+        async function extractPdf(file) {
+            const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ') + '\n';
+            }
+            return text;
+        }
+
+        window.deleteDocument = async (fileName) => {
+            if (!confirm('Remove file?')) return;
+            await db.removeDocumentsByFileName(fileName);
+            indexedFiles.delete(fileName);
+            const item = Array.from(docsList.children).find(li => li.dataset.name === fileName);
+            if (item) item.remove();
+            if (indexedFiles.size === 0) docsList.innerHTML = '<p class="hint">No documents indexed yet.</p>';
+        };
+
+        function addToFileList(fileName) {
+            if (indexedFiles.has(fileName)) return;
+            const hint = docsList.querySelector('.hint'); if (hint) hint.remove();
+            indexedFiles.add(fileName);
+            const li = document.createElement('li'); li.className = 'doc-item'; li.dataset.name = fileName;
+            li.innerHTML = `📄 ${fileName} <button class="remove-btn" onclick="deleteDocument('${fileName}')">❌</button>`;
+            docsList.appendChild(li);
+        }
+
+        sendBtn.onclick = handleChat;
+        userInput.onkeydown = (e) => { if (e.key === 'Enter') handleChat(); };
+
+        async function handleChat() {
+            const prompt = userInput.value.trim(); if (!prompt || !isReady) return;
+            userInput.value = ''; appendUserMessage(prompt);
+            const vector = await requestEmbedding(prompt);
+            const results = await db.query(vector, 5);
+            const context = results.length > 0 ? results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n') : 'No context.';
+            prepareAIChat(results);
+            worker.postMessage({ action: 'generate', payload: { prompt, context } });
+        }
+
+        function chunkText(text, size, overlap) {
+            const chunks = [];
+            for (let i = 0; i < text.length; i += size - overlap) {
+                if (i + size > text.length) { chunks.push(text.slice(i)); break; }
+                chunks.push(text.slice(i, i + size));
+            }
+            return chunks;
+        }
+
+        function requestEmbedding(text) {
+            return new Promise(res => {
+                const h = (e) => { if (e.data.action === 'embed_result') { worker.removeEventListener('message', h); res(e.data.payload.vector); } };
+                worker.addEventListener('message', h);
+                worker.postMessage({ action: 'embed', payload: { text } });
+            });
+        }
+
+        function appendUserMessage(text) {
+            const div = document.createElement('div'); div.className = 'message user';
+            div.innerHTML = `<div class="avatar">U</div><div class="content">${text}</div>`;
+            chatHistory.appendChild(div); chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function prepareAIChat(sources = []) {
+            currentChatResponse = document.createElement('div'); currentChatResponse.className = 'message ai text-left';
+            currentChatResponse.innerHTML = `<div class="avatar">G4</div><div class="content"><em>Thinking...</em></div><button class="copy-btn" onclick="copyToClipboard(this)">📋</button>`;
+            chatHistory.appendChild(currentChatResponse); chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function updateAIChat(text) {
+            if (currentChatResponse) {
+                currentChatResponse.querySelector('.content').innerHTML = window.marked.parse(text);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+        }
+
+        window.copyToClipboard = async (btn) => {
+            await navigator.clipboard.writeText(btn.closest('.message').querySelector('.content').innerText);
+            btn.innerText = '✅'; setTimeout(() => btn.innerText = '📋', 2000);
+        };
+    </script>
+</body>
+</html>

@@ -103,12 +103,12 @@ async function generateResponse(userPrompt, context) {
       
       let textToPush = decoded;
       
-      // Filter reasoning/thought blocks (Gemma 4 specific)
+      // Robust Reasoning Filter (Gemma 4 specific)
       // The model often starts with "thought\n..."
-      if (textToPush.includes('thought')) {
-        const parts = textToPush.split(/\n\n/);
-        if (parts.length > 1) {
-            textToPush = parts.slice(1).join('\n\n');
+      if (textToPush.toLowerCase().includes('thought')) {
+        const thoughtParts = textToPush.split(/\n\n|Answer:/i);
+        if (thoughtParts.length > 1) {
+            textToPush = thoughtParts.slice(1).join('\n\n').trim();
         } else {
             textToPush = '_Thinking..._';
         }
