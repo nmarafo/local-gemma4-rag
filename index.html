@@ -10,10 +10,24 @@
     <link rel="stylesheet" href="style.css">
     <!-- Essential Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
         // Set worker for pdf.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // Configure marked with highlight.js
+        window.marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            gfm: true,
+            breaks: true
+        });
     </script>
 </head>
 <body>

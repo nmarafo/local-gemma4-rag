@@ -281,9 +281,97 @@ h1 {
 
 .message .content {
     background: rgba(255, 255, 255, 0.05);
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
     border-radius: 18px;
     font-size: 0.95rem;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+/* Markdown Element Styling */
+.message .content h1, 
+.message .content h2, 
+.message .content h3 {
+    margin: 1.5rem 0 0.75rem 0;
+    color: var(--accent);
+    line-height: 1.3;
+}
+
+.message .content h1 { font-size: 1.4rem; }
+.message .content h2 { font-size: 1.2rem; }
+.message .content h3 { font-size: 1.1rem; }
+
+.message .content p {
+    margin-bottom: 1rem;
+}
+
+.message .content p:last-child {
+    margin-bottom: 0;
+}
+
+.message .content ul, 
+.message .content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.message .content li {
+    margin-bottom: 0.4rem;
+}
+
+.message .content code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #f7768e;
+}
+
+.message .content pre {
+    background: #1a1b26 !important; /* Tokyo Night Dark feel */
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.25rem 0;
+    overflow-x: auto;
+    border: 1px solid var(--glass-border);
+}
+
+.message .content pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: 0.9rem;
+}
+
+.message .content blockquote {
+    border-left: 4px solid var(--accent);
+    background: rgba(187, 139, 255, 0.05);
+    padding: 0.75rem 1.25rem;
+    margin: 1.25rem 0;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.message .content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+}
+
+.message .content th, 
+.message .content td {
+    padding: 0.75rem;
+    border: 1px solid var(--glass-border);
+    text-align: left;
+}
+
+.message .content th {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--accent);
+    font-weight: 600;
 }
 
 .message.ai .content {
