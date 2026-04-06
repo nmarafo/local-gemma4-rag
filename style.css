@@ -592,3 +592,64 @@ footer strong {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
+
+/* New UI Elements: Clear & Copy */
+.chat-header {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+#clear-chat-btn {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#clear-chat-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+}
+
+.message.ai {
+    position: relative;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 0;
+    right: -35px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.message.ai:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--accent);
+}

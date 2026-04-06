@@ -22,6 +22,7 @@ let isReady = false;
 let currentChatResponse = null;
 let indexedFiles = new Set();
 const modelSelect = document.getElementById('model-select');
+const clearChatBtn = document.getElementById('clear-chat-btn');
 
 // Initialization
 initBtn.onclick = () => {
@@ -29,6 +30,17 @@ initBtn.onclick = () => {
   modelSelect.disabled = true;
   statusText.innerText = 'Initializing WebGPU Engine...';
   worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
+};
+
+clearChatBtn.onclick = () => {
+  if (confirm('Clear all messages?')) {
+    chatHistory.innerHTML = `
+      <div class="message ai">
+          <div class="avatar">G4</div>
+          <div class="content">Chat history cleared. How can I help you today?</div>
+      </div>
+    `;
+  }
 };
 
 // Worker Communication
@@ -261,10 +273,28 @@ function prepareAIChat(sources = []) {
         <div class="content"><em>Generating...</em></div>
         ${sourcesHtml}
     </div>
+    <button class="copy-btn" onclick="copyToClipboard(this)" title="Copy output">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+    </button>
   `;
   chatHistory.appendChild(currentChatResponse);
   chatHistory.scrollTop = chatHistory.scrollHeight;
 }
+
+window.copyToClipboard = async (btn) => {
+  const messageDiv = btn.closest('.message');
+  const contentDiv = messageDiv.querySelector('.content');
+  const text = contentDiv.innerText;
+  
+  try {
+    await navigator.clipboard.writeText(text);
+    const originalSvg = btn.innerHTML;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    setTimeout(() => btn.innerHTML = originalSvg, 2000);
+  } catch (err) {
+    console.error('Failed to copy!', err);
+  }
+};
 
 function updateAIChat(text) {
   if (currentChatResponse) {
