@@ -8,10 +8,11 @@ pinned: false
 header: mini
 models:
   - onnx-community/gemma-4-E2B-it-ONNX
+  - onnx-community/gemma-4-E4B-it-ONNX
   - Xenova/all-MiniLM-L6-v2
 ---
 
-# 🛡️ Local RAG with Gemma 2B & WebGPU
+# 🛡️ Local Gemma 4 Multimodal Agent
 
 This is a **privacy-first** document assistant that runs entirely in your browser. 
 
