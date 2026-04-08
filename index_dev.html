@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma 4 | Private Local RAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Essential Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        // Set worker for pdf.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // Configure marked with highlight.js
+        window.marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            gfm: true,
+            breaks: true
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>Gemma 4 RAG</h1>
+                <p class="subtitle">Secure, local-first document chat powered by WebGPU & Orama</p>
+            </div>
+            <div id="sync-indicator" title="Synchronized with GitHub & HF">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+        </header>
+
+        <main id="app">
+            <!-- Setup & Initialization -->
+            <div id="setup-container" class="card glass">
+                <div class="status-box">
+                    <h2 id="status-text">Initialize AI Engine</h2>
+                    <p class="status-label">Ready to load ~1.6GB of optimized models to your GPU</p>
+                </div>
+                
+                <div class="status-grid">
+                    <div class="status-item" id="status-embedding">
+                        <div class="status-label">Embedding (MiniLM-L6)</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-embedding" class="progress-fill"></div>
+                        </div>
+                    </div>
+                    <div class="status-item" id="status-llm">
+                        <div class="status-label">Gemma 4 (Q4_K_M)</div>
+                        <div class="progress-bar-container">
+                            <div id="progress-llm" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-selector-container">
+                    <label for="model-select" class="status-label">Select Model Variant:</label>
+                    <select id="model-select" class="glass-select">
+                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
+                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
+                    </select>
+                    <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B variant requires significant GPU memory (~4GB download).</p>
+                </div>
+
+                <button id="init-btn" class="primary-btn">Initialize WebGPU AI</button>
+                <p id="error-message" class="error-text" style="display: none;"></p>
+            </div>
+
+            <!-- Chat & Upload Interface (Initially Hidden) -->
+            <div id="chat-container" class="hidden">
+                <!-- Sidebar: Indexed Documents -->
+                <aside id="sidebar" class="card glass">
+                    <h3>Indexed Documents</h3>
+                    <div id="docs-list-container">
+                        <ul id="docs-list">
+                            <p class="hint">No documents indexed yet.</p>
+                        </ul>
+                    </div>
+                </aside>
+
+                <div class="chat-main">
+                    <!-- Upload Section -->
+                    <div class="card glass" id="upload-card">
+                        <div class="upload-btn-wrapper">
+                            <div class="upload-btn-placeholder">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                <p id="upload-status">Drop files here or click to index documents</p>
+                                <p class="hint">Supports TXT, MD, PDF (local parsing)</p>
+                            </div>
+                            <input type="file" id="file-input" multiple accept=".txt,.md,.pdf,.js" />
+                        </div>
+                    </div>
+
+                    <!-- Chat History -->
+                    <div class="card glass chat-card">
+                        <div class="chat-header">
+                            <h3>Conversation</h3>
+                            <button id="clear-chat-btn" title="Clear conversation history">🗑️ Clear Chat</button>
+                        </div>
+                        <div id="chat-history">
+                            <div class="message ai">
+                                <div class="avatar">G4</div>
+                                <div class="content">
+                                    Hello! I am initialized and ready. Upload some documents to start our private conversation.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="input-area">
+                            <input type="text" id="user-input" placeholder="Ask a question about your documents..." autocomplete="off">
+                            <button id="send-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <p>Created by <strong>Norberto Martín Afonso</strong> &bull; Follow on 
+                    <a href="https://x.com/NorbertoMartnAf" target="_blank" class="social-link">X (@NorbertoMartnAf)</a> & 
+                    <a href="https://github.com/nmarafo" target="_blank" class="social-link">GitHub (nmarafo)</a>
+                </p>
+                <p class="tech-stack">Powered by <strong>Transformers.js v4</strong> & <strong>Orama v2</strong> &bull; Local & Private</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="main.js"></script>
+</body>
+</html>

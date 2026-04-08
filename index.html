@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemma 4 | Private Local RAG</title>
+    <title>Gemma 4 Multimodal Agent | Standalone</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- Essential Libraries -->
+    
+    <!-- Essential Libraries (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
-        // Set worker for pdf.js
+        // Set worker for pdf.js (CDN)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
         // Configure marked with highlight.js
@@ -29,118 +29,706 @@
             breaks: true
         });
     </script>
+    <style>
+        :root {
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --accent: #bb8bff;
+            --accent-hover: #a370f7;
+            --bg: #0f1115;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(30, 41, 59, 0.5);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f1115 100%);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: var(--text-muted); font-size: 1rem; }
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            margin-bottom: 1.5rem;
+        }
+        .card.glass { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+        #setup-container {
+            max-width: 600px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .status-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-align: left;
+        }
+        .progress-bar-container {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #7c3aed, var(--accent));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(187, 139, 255, 0.5);
+        }
+        .model-selector-container { margin-bottom: 2rem; text-align: left; }
+        .glass-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 0.95rem;
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+        .glass-select option { background: #1e293b; color: #fff; }
+        .primary-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .primary-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(187, 139, 255, 0.3);
+        }
+        .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #chat-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 1.5rem;
+            flex-grow: 1;
+            min-height: 0;
+        }
+        .hidden { display: none !important; }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+            max-height: 700px;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        .sidebar h3 { font-size: 1rem; color: var(--accent); margin-bottom: 1rem; }
+        /* RAG Zone */
+        .upload-rag-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+            border: 2px dashed var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            margin-bottom: 1rem;
+        }
+        .upload-rag-zone:hover { border-color: var(--accent); background: rgba(187,139,255,0.05); }
+        /* Media Zone */
+        .upload-media-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 2px dashed rgba(52, 211, 153, 0.4);
+            background: rgba(52, 211, 153, 0.05);
+            border-radius: 12px;
+            color: #a7f3d0;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        .upload-media-zone:hover { border-color: #34d399; background: rgba(52, 211, 153, 0.1); }
+        .doc-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
+        }
+        .doc-item button { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; }
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+        }
+        .chat-card {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 700px;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #clear-chat-btn {
+            background: transparent; border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;
+            padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
+        }
+        #chat-history {
+            flex-grow: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;
+        }
+        .message { display: flex; gap: 1rem; max-width: 85%; }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message .avatar {
+            width: 32px; height: 32px; border-radius: 8px; background: var(--glass);
+            display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+        }
+        .message.user .avatar { background: var(--accent); }
+        .message .content {
+            background: rgba(255, 255, 255, 0.05); padding: 1rem 1.5rem; border-radius: 18px; font-size: 0.95rem; word-break: break-word;
+        }
+        .message.user .content { background: var(--accent); color: #fff; }
+        .message img, .message audio { max-width: 100%; border-radius: 8px; margin-top: 0.5rem; }
+        .message audio { width: 300px; }
+        .preview-tray {
+            padding: 0.5rem 1.5rem;
+            background: rgba(0,0,0,0.2);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 1rem;
+            min-height: 0;
+            transition: all 0.2s;
+        }
+        .preview-tray.empty { display: none; }
+        .preview-item {
+            position: relative;
+            width: 60px; height: 60px;
+            border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--glass-border);
+            background: #000;
+        }
+        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-item audio { width: 100%; height: 100%; opacity: 0; }
+        .preview-item .icon { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; font-size: 1.5rem; pointer-events: none;}
+        .remove-preview {
+            position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white;
+            border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items:center; justify-content:center;
+            padding:0;
+        }
+        .input-area {
+            padding: 1rem 1.5rem; background: rgba(0, 0, 0, 0.2); display: flex; gap: 1rem;
+        }
+        .input-area input {
+            flex-grow: 1; background: var(--glass); border: 1px solid var(--glass-border);
+            border-radius: 12px; padding: 0.75rem 1.25rem; color: #fff; outline: none; transition: border-color 0.2s;
+        }
+        .input-area input:focus { border-color: var(--accent); }
+        .input-area button {
+            background: var(--accent); border: none; width: 45px; height: 45px; border-radius: 12px;
+            color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
+        }
+        .input-area button:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
+        .error-text { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>Gemma 4 RAG</h1>
-                <p class="subtitle">Secure, local-first document chat powered by WebGPU & Orama</p>
-            </div>
-            <div id="sync-indicator" title="Synchronized with GitHub & HF">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <h1>Gemma 4 Multimodal Agent</h1>
+                <p class="subtitle">Secure, local-first RAG + Vision + Audio via WebGPU</p>
             </div>
         </header>
-
         <main id="app">
-            <!-- Setup & Initialization -->
             <div id="setup-container" class="card glass">
                 <div class="status-box">
                     <h2 id="status-text">Initialize AI Engine</h2>
-                    <p class="status-label">Ready to load ~1.6GB of optimized models to your GPU</p>
+                    <p class="status-label">Downloads Models 100% in-browser. Fast inference via WebGPU.</p>
                 </div>
                 
                 <div class="status-grid">
-                    <div class="status-item" id="status-embedding">
+                    <div class="status-item">
                         <div class="status-label">Embedding (MiniLM-L6)</div>
-                        <div class="progress-bar-container">
-                            <div id="progress-embedding" class="progress-fill"></div>
-                        </div>
+                        <div class="progress-bar-container"><div id="progress-embedding" class="progress-fill"></div></div>
                     </div>
-                    <div class="status-item" id="status-llm">
-                        <div class="status-label">Gemma 4 (Q4_K_M)</div>
-                        <div class="progress-bar-container">
-                            <div id="progress-llm" class="progress-fill"></div>
-                        </div>
+                    <div class="status-item">
+                        <div class="status-label">Gemma 4 Multimodal</div>
+                        <div class="progress-bar-container"><div id="progress-llm" class="progress-fill"></div></div>
                     </div>
                 </div>
-
                 <div class="model-selector-container">
                     <label for="model-select" class="status-label">Select Model Variant:</label>
                     <select id="model-select" class="glass-select">
-                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
-                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
+                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Audio/Vision Support)</option>
+                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - Slower, Audio/Vision Support)</option>
                     </select>
-                    <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B variant requires significant GPU memory (~4GB download).</p>
                 </div>
-
-                <button id="init-btn" class="primary-btn">Initialize WebGPU AI</button>
+                <button id="init-btn" class="primary-btn">Initialize Local AI Engine</button>
                 <p id="error-message" class="error-text" style="display: none;"></p>
             </div>
-
-            <!-- Chat & Upload Interface (Initially Hidden) -->
             <div id="chat-container" class="hidden">
-                <!-- Sidebar: Indexed Documents -->
-                <aside id="sidebar" class="card glass">
-                    <h3>Indexed Documents</h3>
-                    <div id="docs-list-container">
-                        <ul id="docs-list">
-                            <p class="hint">No documents indexed yet.</p>
-                        </ul>
+                <!-- RAG Context Sidebar -->
+                <aside class="card glass sidebar">
+                    <h3>📚 Local Knowledge (RAG)</h3>
+                    <p class="status-label">Upload PDFs or TXTs to give the model persistent context memory.</p>
+                    
+                    <div class="upload-rag-zone" id="drop-zone-rag">
+                        📁 Drop / Click to add Docs
                     </div>
+                    <input type="file" id="file-input-rag" multiple accept=".txt,.md,.pdf" style="display: none;">
+                    
+                    <ul id="docs-list" style="list-style: none; margin-top: 1rem;">
+                        <p class="hint status-label">No documents indexed yet.</p>
+                    </ul>
                 </aside>
-
+                <!-- Central Chat Area -->
                 <div class="chat-main">
-                    <!-- Upload Section -->
-                    <div class="card glass" id="upload-card">
-                        <div class="upload-btn-wrapper">
-                            <div class="upload-btn-placeholder">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                <p id="upload-status">Drop files here or click to index documents</p>
-                                <p class="hint">Supports TXT, MD, PDF (local parsing)</p>
-                            </div>
-                            <input type="file" id="file-input" multiple accept=".txt,.md,.pdf,.js" />
-                        </div>
-                    </div>
-
-                    <!-- Chat History -->
                     <div class="card glass chat-card">
                         <div class="chat-header">
                             <h3>Conversation</h3>
-                            <button id="clear-chat-btn" title="Clear conversation history">🗑️ Clear Chat</button>
+                            <button id="clear-chat-btn">🗑️ Clear Chat</button>
                         </div>
+                        
                         <div id="chat-history">
                             <div class="message ai">
                                 <div class="avatar">G4</div>
-                                <div class="content">
-                                    Hello! I am initialized and ready. Upload some documents to start our private conversation.
-                                </div>
+                                <div class="content">Hello! I am ready. You can ask me questions about your RAG documents, or upload an image/audio on the right panel to analyze it!</div>
                             </div>
                         </div>
                         
+                        <!-- Media Preview Tray -->
+                        <div class="preview-tray empty" id="preview-tray"></div>
                         <div class="input-area">
-                            <input type="text" id="user-input" placeholder="Ask a question about your documents..." autocomplete="off">
+                            <input type="text" id="user-input" placeholder="Type a message or ask to describe attachments..." autocomplete="off">
                             <button id="send-btn">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             </button>
                         </div>
                     </div>
                 </div>
+                <!-- Right Sidebar (Media Attachments for Multimodal) -->
+                <aside class="card glass sidebar">
+                    <h3 style="color: #34d399">👁️🗨️ Attach Media</h3>
+                    <p class="status-label">Add an Image or Audio to prompt the multimodal capacities of Gemma 4.</p>
+                    
+                    <div class="upload-media-zone" id="drop-zone-media">
+                        🖼️ Drop / Click to attach Photo or Audio
+                    </div>
+                    <input type="file" id="file-input-media" accept="image/*,audio/wav" style="display: none;">
+                    
+                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+                        * Attachments are passed uniquely in the next prompt, they do not persist like RAG docs.
+                        <br><br>
+                        * Supported Audio: .wav formats (max 30s)
+                        <br>
+                        * Supported Images: .jpg, .png, .webp
+                    </div>
+                </aside>
             </div>
         </main>
-
-        <footer>
-            <div class="footer-content">
-                <p>Created by <strong>Norberto Martín Afonso</strong> &bull; Follow on 
-                    <a href="https://x.com/NorbertoMartnAf" target="_blank" class="social-link">X (@NorbertoMartnAf)</a> & 
-                    <a href="https://github.com/nmarafo" target="_blank" class="social-link">GitHub (nmarafo)</a>
-                </p>
-                <p class="tech-stack">Powered by <strong>Transformers.js v4</strong> & <strong>Orama v2</strong> &bull; Local & Private</p>
-            </div>
+        <footer style="text-align: center; margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+            Created by <strong>Norberto Martín Afonso</strong>. Follow me on X <a href="https://x.com/NorbertoMartnAf" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 500;">@NorbertoMartnAf</a> and on Github <a href="https://github.com/nmarafo" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 500;">@nmarafo</a>
         </footer>
     </div>
 
-    <!-- Scripts -->
-    <script type="module" src="main.js"></script>
+    <!-- MAIN APP SCRIPT -->
+    <script type="module">
+        import { create, insert, search } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+
+        // 1. Vector DB Implementation
+        class VectorDB {
+            constructor() { this.db = null; this.isInitialized = false; }
+            async init() {
+                if (this.isInitialized) return;
+                this.db = await create({ 
+                    schema: { text: 'string', fileName: 'string', embedding: 'vector[384]' }, 
+                    indexStyles: { embedding: 'cosine' } 
+                });
+                this.isInitialized = true;
+            }
+            async addDocument(text, fileName, embedding) {
+                if (!this.isInitialized) await this.init();
+                return await insert(this.db, { text, fileName, embedding });
+            }
+            async query(vector, limit = 5) {
+                const results = await search(this.db, { 
+                    mode: 'vector', 
+                    vector: { value: vector, property: 'embedding' }, 
+                    similarity: 0.5, 
+                    limit 
+                });
+                return results.hits.map(hit => ({ text: hit.document.text, fileName: hit.document.fileName, score: hit.score }));
+            }
+        }
+        const db = new VectorDB();
+
+        // 2. Web Worker logic
+        const workerBlobCode = `
+            let Transformers = null;
+            let processor = null;
+            let model = null;
+            let embeddingPipeline = null;
+            let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
+
+            self.onerror = (e) => {
+                self.postMessage({ action: 'error', payload: { message: "Worker Global Error: " + e.message + ". TIP: If on file://, use a server." } });
+            };
+
+            self.onmessage = async (e) => {
+                const { action, payload } = e.data;
+                try {
+                    if (action === 'init') {
+                        if (payload?.modelId) CURRENT_LLM_MODEL = payload.modelId;
+                        self.postMessage({ action: 'status', payload: { text: 'Waking up AI Engine...' } });
+                        
+                        // --- DYNAMIC ESM IMPORT ---
+                        if (!Transformers) {
+                            try {
+                                Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
+                            } catch (err) {
+                                throw new Error("Security policy blocked Transformers.js. Please use a local server like Live Server.");
+                            }
+                        }
+                        
+                        const { env } = Transformers;
+                        env.allowLocalModels = false;
+                        env.useBrowserCache = true;
+                        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
+                        
+                        await initModels();
+                    } else if (action === 'embed') {
+                        const output = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
+                        self.postMessage({ action: 'embed_result', payload: { vector: Array.from(output.data) } });
+                    } else if (action === 'generate') {
+                        await generateResponse(payload.prompt, payload.context, payload.mediaItems);
+                    } else if (action === 'cleanup') {
+                        if (model) await model.dispose();
+                        if (embeddingPipeline) await embeddingPipeline.dispose();
+                    }
+                } catch (err) {
+                    self.postMessage({ action: 'error', payload: { message: err.message } });
+                }
+            };
+
+            async function initModels() {
+                const { pipeline, AutoProcessor, Gemma4ForConditionalGeneration } = Transformers;
+                
+                self.postMessage({ action: 'status', payload: { text: 'Loading Embedding Model...' } });
+                embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
+                    device: 'webgpu',
+                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'embedding', progress: p.progress } }); }
+                });
+
+                self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4 Processor...' } });
+                processor = await AutoProcessor.from_pretrained(CURRENT_LLM_MODEL);
+                
+                self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4 Model...' } });
+                model = await Gemma4ForConditionalGeneration.from_pretrained(CURRENT_LLM_MODEL, { 
+                    dtype: "q4f16",
+                    device: 'webgpu',
+                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } }); }
+                });
+
+                self.postMessage({ action: 'ready' });
+            }
+
+            async function generateResponse(userPrompt, context, mediaItems = []) {
+                try {
+                    const { load_image, read_audio, TextStreamer } = Transformers;
+                    
+                    const isGeneral = !context || context.includes('No context');
+                    const sysPrompt = isGeneral 
+                        ? "Act as a helpful assistant. Always respond in Spanish." 
+                        : "You are an assistant. Answer primarily using the provided context. Always respond in Spanish.\\n\\nCONTEXT:\\n" + context;
+
+                    let userContentBlock = [];
+                    let processedImages = [];
+                    let processedAudio = [];
+
+                    for(const media of mediaItems) {
+                        if(media.type === 'image') {
+                            const img = await load_image(media.data);
+                            processedImages.push(img);
+                            userContentBlock.push({ type: "image", image: img });
+                        } else if(media.type === 'audio') {
+                            const aud = await read_audio(media.data);
+                            processedAudio.push(aud);
+                            userContentBlock.push({ type: "audio", audio: aud });
+                        }
+                    }
+
+                    userContentBlock.push({ type: "text", text: userPrompt || "Describe the contents of this file." });
+
+                    const messages = [
+                        { role: 'system', content: sysPrompt },
+                        { role: 'user', content: userContentBlock }
+                    ];
+
+                    const prompt = processor.apply_chat_template(messages, { enable_thinking: false, add_generation_prompt: true });
+                    
+                    let inputs;
+                    const imgArg = processedImages.length === 1 ? processedImages[0] : processedImages.length > 1 ? processedImages : null;
+                    const audArg = processedAudio.length === 1 ? processedAudio[0] : processedAudio.length > 1 ? processedAudio : null;
+                    
+                    if (imgArg && audArg) inputs = await processor(prompt, imgArg, audArg);
+                    else if (imgArg) inputs = await processor(prompt, imgArg);
+                    else if (audArg) inputs = await processor(prompt, null, audArg);
+                    else inputs = await processor(prompt);
+
+                    let fullOutputText = "";
+                    const streamer = new TextStreamer(processor.tokenizer, {
+                        skip_prompt: true,
+                        skip_special_tokens: true,
+                        callback_function: (text) => {
+                            fullOutputText += text;
+                            self.postMessage({ action: 'chunk', payload: { text: fullOutputText } });
+                        }
+                    });
+
+                    await model.generate({
+                        ...inputs,
+                        max_new_tokens: 1024,
+                        do_sample: false,
+                        streamer: streamer
+                    });
+
+                    self.postMessage({ action: 'generate_complete', payload: { text: fullOutputText } });
+                } catch (err) {
+                    self.postMessage({ action: 'error', payload: { message: "Generation error: " + err.message } });
+                }
+            }
+        `;
+        const blob = new Blob([workerBlobCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
+
+        // 3. UI Logic
+        const setupContainer = document.getElementById('setup-container');
+        const chatContainer = document.getElementById('chat-container');
+        const initBtn = document.getElementById('init-btn');
+        const statusText = document.getElementById('status-text');
+        const errorMessage = document.getElementById('error-message');
+        const progresses = { embedding: document.getElementById('progress-embedding'), llm: document.getElementById('progress-llm') };
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const chatHistory = document.getElementById('chat-history');
+        const previewTray = document.getElementById('preview-tray');
+        const docsList = document.getElementById('docs-list');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+
+        let isReady = false;
+        let activeMediaAttachments = [];
+
+        initBtn.onclick = () => {
+            initBtn.disabled = true; errorMessage.style.display='none';
+            worker.postMessage({ action: 'init', payload: { modelId: document.getElementById('model-select').value } });
+        };
+
+        window.addEventListener('beforeunload', () => {
+            if (worker) {
+                worker.postMessage({ action: 'cleanup' });
+                worker.terminate();
+            }
+        });
+
+        worker.onmessage = async (e) => {
+            const { action, payload } = e.data;
+            if (action === 'progress') {
+                progresses[payload.model].style.width = `${payload.progress}%`;
+            } else if (action === 'status') {
+                statusText.innerText = payload.text;
+            } else if (action === 'ready') {
+                isReady = true; setupContainer.classList.add('hidden'); chatContainer.classList.remove('hidden'); await db.init();
+            } else if (action === 'chunk') {
+                updateAIChat(payload.text);
+            } else if (action === 'generate_complete') {
+                // Done
+            } else if (action === 'error') {
+                if (isReady) {
+                    updateAIChat(`❌ **Error:** ${payload.message}`);
+                } else {
+                    errorMessage.innerText = payload.message; errorMessage.style.display = 'block'; statusText.innerText = "Error"; initBtn.disabled = false;
+                }
+            }
+        };
+
+        // RAG Handling
+        const dropRAG = document.getElementById('drop-zone-rag');
+        const inputRAG = document.getElementById('file-input-rag');
+        dropRAG.onclick = () => inputRAG.click();
+        
+        inputRAG.onchange = async (e) => {
+            for (const file of e.target.files) {
+                const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
+                const chunks = chunkText(text, 1000, 200);
+                for (const chunk of chunks) {
+                    const vector = await requestEmbedding(chunk);
+                    await db.addDocument(chunk, file.name, vector);
+                }
+                const li = document.createElement('li'); li.className='doc-item'; li.innerHTML = `📄 ${file.name}`; docsList.appendChild(li);
+                const hint = docsList.querySelector('.hint'); if(hint) hint.remove();
+            }
+        };
+
+        async function extractPdf(file) {
+            const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            let text = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(' ') + '\n';
+            }
+            return text;
+        }
+
+        function chunkText(text, size, overlap) {
+            const chunks = [];
+            for (let i = 0; i < text.length; i += size - overlap) {
+                chunks.push(text.slice(i, i + size));
+                if (i + size > text.length) break;
+            }
+            return chunks;
+        }
+
+        // Media Handling
+        const dropMedia = document.getElementById('drop-zone-media');
+        const inputMedia = document.getElementById('file-input-media');
+        dropMedia.onclick = () => inputMedia.click();
+
+        inputMedia.onchange = async (e) => {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const base64data = ev.target.result;
+                const isImage = file.type.startsWith('image/');
+                const isAudio = file.type.startsWith('audio/');
+                if(!isImage && !isAudio) return;
+                activeMediaAttachments.push({ type: isImage ? 'image' : 'audio', data: base64data });
+                renderPreviewTray();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function renderPreviewTray() {
+            previewTray.innerHTML = '';
+            if(activeMediaAttachments.length === 0) { previewTray.classList.add('empty'); return; }
+            previewTray.classList.remove('empty');
+            activeMediaAttachments.forEach((m, idx) => {
+                const div = document.createElement('div'); div.className = 'preview-item';
+                div.innerHTML = m.type === 'image' 
+                    ? `<img src="${m.data}"/><button class="remove-preview" onclick="window.removeMedia(${idx})">X</button>`
+                    : `<div class="icon">🎵</div><button class="remove-preview" onclick="window.removeMedia(${idx})">X</button>`;
+                previewTray.appendChild(div);
+            });
+        }
+        window.removeMedia = (idx) => { activeMediaAttachments.splice(idx, 1); renderPreviewTray(); };
+
+        // Chat Logistics
+        sendBtn.onclick = handleChat;
+        userInput.onkeydown = (e) => { if (e.key === 'Enter') handleChat(); };
+
+        async function handleChat() {
+            const prompt = userInput.value.trim(); 
+            if (!isReady || (!prompt && activeMediaAttachments.length === 0)) return;
+            
+            let attachmentsHtml = activeMediaAttachments.map(m => m.type==='image' ? `<img src="${m.data}" style="max-width:200px; display:block; margin: 10px 0;" />` : `<br>🎵 Audio Attached`).join('');
+            appendUserMessage(prompt + attachmentsHtml);
+            userInput.value = '';
+
+            let context = 'No context.';
+            if (prompt) {
+                const vector = await requestEmbedding(prompt);
+                const results = await db.query(vector, 3);
+                if (results.length > 0) context = results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n');
+            }
+
+            worker.postMessage({ action: 'generate', payload: { prompt, context, mediaItems: activeMediaAttachments } });
+            activeMediaAttachments = [];
+            renderPreviewTray();
+            prepareAIChat();
+        }
+
+        function requestEmbedding(text) {
+            return new Promise(res => {
+                const h = (e) => { if (e.data.action === 'embed_result') { worker.removeEventListener('message', h); res(e.data.payload.vector); } };
+                worker.addEventListener('message', h);
+                worker.postMessage({ action: 'embed', payload: { text } });
+            });
+        }
+
+        function appendUserMessage(html) {
+            const div = document.createElement('div'); div.className = 'message user';
+            div.innerHTML = `<div class="avatar">U</div><div class="content">${html}</div>`;
+            chatHistory.appendChild(div); chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        let currentChatResponse = null;
+        function prepareAIChat() {
+            currentChatResponse = document.createElement('div'); currentChatResponse.className = 'message ai';
+            currentChatResponse.innerHTML = `<div class="avatar">G4</div><div class="content"><em>Thinking...</em></div>`;
+            chatHistory.appendChild(currentChatResponse); chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function updateAIChat(text) {
+            if (currentChatResponse) {
+                currentChatResponse.querySelector('.content').innerHTML = window.marked.parse(text);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+        }
+
+        clearChatBtn.onclick = () => { if(confirm('Clear history?')) chatHistory.innerHTML = ''; };
+    </script>
 </body>
 </html>
