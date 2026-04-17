@@ -469,8 +469,18 @@
             }
             else if (action === 'chunk') streamAIChat(payload.text);
             else if (action === 'done') finalizeAIChat();
-            else if (action === 'error') alert("Error IA: " + payload.message);
+            else if (action === 'error') showError("Error IA: " + payload.message);
         };
+
+        function showError(msg) {
+            console.error("App Error:", msg);
+            const div = document.createElement('div');
+            div.style.cssText = 'position:fixed; top:20px; right:20px; background:#ef4444; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.5); font-weight:bold; max-width: 350px; cursor:pointer;';
+            div.innerText = msg;
+            div.onclick = () => div.remove();
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 6000);
+        }
 
         // --- RAG & Docs ---
         document.getElementById('add-docs-btn').onclick = () => document.getElementById('file-upload').click();
@@ -478,16 +488,22 @@
         document.body.appendChild(fileUpload);
 
         fileUpload.onchange = async (e) => {
-            for (const file of e.target.files) {
-                const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
-                const chunks = structuralChunkText(text);
-                statusLabel.innerHTML = '<span class="dot orange"></span> Indexando...';
-                for (const chunk of chunks) {
-                    const vector = await requestEmbedding(chunk);
-                    await wsDB.addDoc(currentNotebook, chunk, file.name, vector, currentNotebook);
+            if (!isReady) return showError("¡Atención! Debes Inicializar la IA antes de subir documentos.");
+            try {
+                for (const file of e.target.files) {
+                    const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
+                    const chunks = structuralChunkText(text);
+                    statusLabel.innerHTML = '<span class="dot orange"></span> Indexando...';
+                    for (const chunk of chunks) {
+                        const vector = await requestEmbedding(chunk);
+                        await wsDB.addDoc(currentNotebook, chunk, file.name, vector, currentNotebook);
+                    }
+                    statusLabel.innerHTML = '<span class="dot green"></span> Listo';
+                    renderDocsUI(file.name);
                 }
-                statusLabel.innerHTML = '<span class="dot green"></span> Listo';
-                renderDocsUI();
+            } catch (err) {
+                statusLabel.innerHTML = '<span class="dot red"></span> Error';
+                showError("Falló la indexación: " + err.message);
             }
         };
 
@@ -502,8 +518,14 @@
         }
 
         function requestEmbedding(text) {
-            return new Promise(res => {
-                const h = (e) => { if (e.data.action === 'embed_result') { worker.removeEventListener('message', h); res(e.data.payload.vector); } };
+            return new Promise((res, rej) => {
+                const h = (e) => { 
+                    if (e.data.action === 'embed_result') { 
+                        worker.removeEventListener('message', h); res(e.data.payload.vector); 
+                    } else if (e.data.action === 'error') {
+                        worker.removeEventListener('message', h); rej(new Error(e.data.payload.message));
+                    }
+                };
                 worker.addEventListener('message', h);
                 worker.postMessage({ action: 'embed', payload: { text } });
             });
@@ -526,7 +548,7 @@
             currentNBName.innerText = name;
             saveState();
             document.getElementById('notebook-modal').classList.add('hidden');
-            renderDocsUI();
+            renderDocsUI(null, true);
             chatHistory.innerHTML = `<div class="message assistant">Estás en el cuaderno **${name}**. Chatea o sube documentos.</div>`;
         };
 
@@ -644,9 +666,13 @@
         }
         window.removeMedia = (i) => { activeAttachments.splice(i, 1); renderPreviewTray(); };
 
-        function renderDocsUI() {
-            // Basic doc list for now
-            docsList.innerHTML = '<p class="empty-hint">Documentos en este espacio guardados en memoria.</p>';
+        function renderDocsUI(newDocName = null, clear = false) {
+            if (clear) docsList.innerHTML = '<p class="empty-hint">Documentos en este espacio guardados en memoria.</p>';
+            if (newDocName) {
+                const emptyHint = docsList.querySelector('.empty-hint');
+                if (emptyHint) emptyHint.remove();
+                docsList.innerHTML += `<div class="doc-item"><span class="doc-name" title="${newDocName}">📄 ${newDocName}</span></div>`;
+            }
         }
 
         document.getElementById('clear-chat-btn').onclick = () => { chatHistory.innerHTML = ''; };
