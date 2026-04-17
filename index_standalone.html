@@ -1,459 +1,391 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemma 4 Multimodal Agent | Standalone</title>
+    <title>Gemma 4 Desktop | Standalone</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Essential Libraries (CDN) -->
+    <!-- Libraries (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
-        // Set worker for pdf.js (CDN)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        
-        // Configure marked with highlight.js
-        window.marked.setOptions({
-            highlight: function(code, lang) {
-                if (lang && hljs.getLanguage(lang)) {
-                    return hljs.highlight(code, { language: lang }).value;
-                }
-                return hljs.highlightAuto(code).value;
-            },
-            gfm: true,
-            breaks: true
-        });
     </script>
+
     <style>
         :root {
-            --glass: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --accent: #bb8bff;
+            --bg-color: #0d0d12;
+            --sidebar-bg: rgba(15, 15, 20, 0.7);
+            --accent-color: #7c4dff;
+            --accent-glow: rgba(124, 77, 255, 0.4);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0ab;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --user-msg-bg: rgba(124, 77, 255, 0.1);
+            --bot-msg-bg: rgba(255, 255, 255, 0.05);
             --accent-hover: #a370f7;
-            --bg: #0f1115;
-            --text: #e2e8f0;
-            --text-muted: #94a3b8;
-            --card-bg: rgba(30, 41, 59, 0.5);
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background: var(--bg);
-            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f1115 100%);
-            color: var(--text);
-            font-family: 'Inter', -apple-system, sans-serif;
-            line-height: 1.6;
-            min-height: 100vh;
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        h1 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            letter-spacing: -0.025em;
-            background: linear-gradient(to right, #fff, var(--accent));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .subtitle { color: var(--text-muted); font-size: 1rem; }
-        .card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 2rem;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(12px);
-            margin-bottom: 1.5rem;
-        }
-        .card.glass { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        #setup-container {
-            max-width: 600px;
-            margin: 4rem auto;
-            text-align: center;
-        }
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-        .status-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-            text-align: left;
-        }
-        .progress-bar-container {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
             overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(124, 77, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 242, 255, 0.03) 0%, transparent 40%);
         }
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(to right, #7c3aed, var(--accent));
-            transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(187, 139, 255, 0.5);
-        }
-        .model-selector-container { margin-bottom: 2rem; text-align: left; }
-        .glass-select {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            color: var(--text);
-            font-size: 0.95rem;
-            appearance: none;
-            cursor: pointer;
-            outline: none;
-        }
-        .glass-select option { background: #1e293b; color: #fff; }
-        .primary-btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            font-size: 1rem;
-        }
-        .primary-btn:hover:not(:disabled) {
-            background: var(--accent-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(187, 139, 255, 0.3);
-        }
-        .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        #chat-container {
-            display: grid;
-            grid-template-columns: 280px 1fr 280px;
-            gap: 1.5rem;
-            flex-grow: 1;
-            min-height: 0;
-        }
-        .hidden { display: none !important; }
+
+        .app-container { display: flex; height: 100vh; }
+
+        /* Sidebar */
         .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            height: 100%;
-            max-height: 700px;
-            overflow-y: auto;
-            padding: 1.5rem;
+            padding: 2rem 1.5rem;
+            z-index: 10;
         }
-        .sidebar h3 { font-size: 1rem; color: var(--accent); margin-bottom: 1rem; }
-        /* RAG Zone */
-        .upload-rag-zone {
+
+        .hidden { display: none !important; }
+
+        .logo {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            padding: 1.5rem;
-            border: 2px dashed var(--glass-border);
-            border-radius: 12px;
-            color: var(--text-muted);
-            cursor: pointer;
-            text-align: center;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
-            margin-bottom: 1rem;
+            gap: 0.75rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 2.5rem;
         }
-        .upload-rag-zone:hover { border-color: var(--accent); background: rgba(187,139,255,0.05); }
-        /* Media Zone */
-        .upload-media-zone {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 1rem;
-            border: 2px dashed rgba(52, 211, 153, 0.4);
-            background: rgba(52, 211, 153, 0.05);
-            border-radius: 12px;
-            color: #a7f3d0;
-            cursor: pointer;
-            text-align: center;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
+
+        .logo-icon {
+            width: 32px; height: 32px;
+            background: var(--accent-color);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
+            box-shadow: 0 0 15px var(--accent-glow);
         }
-        .upload-media-zone:hover { border-color: #34d399; background: rgba(52, 211, 153, 0.1); }
+
+        .nav-section { flex: 1; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+        .section-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+            color: var(--text-secondary); margin-bottom: 0.5rem;
+        }
+
+        .secondary-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            gap: 0.5rem; font-size: 0.9rem; transition: all 0.2s;
+            width: 100%;
+        }
+        .secondary-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--accent-color); }
+
+        .docs-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; }
         .doc-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0.6rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 0.75rem; background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px; font-size: 0.85rem;
         }
-        .doc-item button { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; }
-        .chat-main {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            height: 100%;
+        .doc-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 0.5rem; }
+        .remove-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 2px; }
+        .remove-btn:hover { color: #ff4d4d; }
+
+        .status-section {
+            margin-top: 1.5rem; padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex; flex-direction: column; gap: 1rem;
         }
-        .chat-card {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            height: 700px;
-            padding: 0;
-            overflow: hidden;
-            position: relative;
+        .status-item { display: flex; justify-content: space-between; font-size: 0.8rem; align-items: center; }
+        .status-value { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .dot.red { background: #ff4d4d; box-shadow: 0 0 5px #ff4d4d; }
+        .dot.green { background: #4ade80; box-shadow: 0 0 5px #4ade80; }
+        .dot.orange { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
+
+        .dropdown {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
+            color: var(--text-primary); padding: 0.3rem 0.5rem; border-radius: 6px;
+            font-family: inherit; font-size: 0.8rem; outline: none; cursor: pointer;
+            width: 100%; margin-top: 0.5rem;
         }
+
+        /* Main Chat Area */
+        .main-chat { flex: 1; display: flex; flex-direction: column; position: relative; }
         .chat-header {
-            padding: 1rem 1.5rem;
-            background: rgba(0, 0, 0, 0.15);
-            border-bottom: 1px solid var(--glass-border);
-            display: flex; justify-content: space-between; align-items: center;
+            height: 60px; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 2rem;
+            background: rgba(0,0,0,0.1);
         }
-        #clear-chat-btn {
-            background: transparent; border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444;
-            padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer;
-        }
-        #chat-history {
-            flex-grow: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;
-        }
-        .message { display: flex; gap: 1rem; max-width: 85%; }
-        .message.user { align-self: flex-end; flex-direction: row-reverse; }
-        .message .avatar {
-            width: 32px; height: 32px; border-radius: 8px; background: var(--glass);
-            display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-        }
-        .message.user .avatar { background: var(--accent); }
-        .message .content {
-            background: rgba(255, 255, 255, 0.05); padding: 1rem 1.5rem; border-radius: 18px; font-size: 0.95rem; word-break: break-word;
-        }
-        .message.user .content { background: var(--accent); color: #fff; }
-        .message img, .message audio { max-width: 100%; border-radius: 8px; margin-top: 0.5rem; }
-        .message audio { width: 300px; }
-        .preview-tray {
-            padding: 0.5rem 1.5rem;
-            background: rgba(0,0,0,0.2);
-            border-top: 1px solid var(--glass-border);
-            display: flex;
-            gap: 1rem;
-            min-height: 0;
-            transition: all 0.2s;
-        }
-        .preview-tray.empty { display: none; }
-        .preview-item {
+        .chat-header h1 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 600; }
+        .header-actions button { background: none; border: none; color: var(--text-secondary); cursor: pointer; }
+
+        .chat-history { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+        .message {
+            max-width: 85%; padding: 1rem 1.25rem; border-radius: 16px;
+            line-height: 1.6; font-size: 1rem; animation: slideUp 0.3s ease-out;
             position: relative;
-            width: 60px; height: 60px;
-            border-radius: 8px; overflow: hidden;
-            border: 1px solid var(--glass-border);
-            background: #000;
         }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .message.assistant { align-self: flex-start; background: var(--bot-msg-bg); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; }
+        .message.user { align-self: flex-end; background: var(--user-msg-bg); border: 1px solid rgba(124, 77, 255, 0.2); border-bottom-right-radius: 4px; }
+
+        /* Media Previews */
+        .preview-tray { display: flex; gap: 0.75rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 12px; margin-bottom: 0.5rem; }
+        .preview-item { width: 45px; height: 45px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); position: relative; }
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
-        .preview-item audio { width: 100%; height: 100%; opacity: 0; }
-        .preview-item .icon { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; font-size: 1.5rem; pointer-events: none;}
-        .remove-preview {
-            position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white;
-            border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items:center; justify-content:center;
-            padding:0;
+        .remove-preview { position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.7); color: white; border: none; font-size: 8px; cursor: pointer; }
+
+        .input-area { padding: 1.5rem 2rem 2.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+        .input-wrapper {
+            background: var(--glass-bg); border: 1px solid var(--border-color); border-radius: 16px;
+            padding: 0.75rem 1rem; display: flex; align-items: flex-end; gap: 1rem; transition: all 0.3s;
         }
-        .input-area {
-            padding: 1rem 1.5rem; background: rgba(0, 0, 0, 0.2); display: flex; gap: 1rem;
+        .input-wrapper:focus-within { border-color: var(--accent-color); box-shadow: 0 0 20px var(--accent-glow); }
+        textarea { flex: 1; background: transparent; border: none; outline: none; color: white; font-family: inherit; font-size: 1rem; resize: none; max-height: 150px; min-height: 24px; }
+        #send-btn { 
+            background: var(--accent-color); color: white; border: none; width: 40px; height: 40px; 
+            border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
         }
-        .input-area input {
-            flex-grow: 1; background: var(--glass); border: 1px solid var(--glass-border);
-            border-radius: 12px; padding: 0.75rem 1.25rem; color: #fff; outline: none; transition: border-color 0.2s;
+        #send-btn:disabled { background: #444; opacity: 0.5; cursor: default; }
+
+        /* Citations & Tooltips */
+        .citation {
+            display: inline-flex; justify-content: center; align-items: center; min-width: 1.2em; height: 1.2em;
+            color: var(--text-primary); background: rgba(124, 77, 255, 0.2); border: 1px solid var(--accent-color);
+            padding: 2px 6px; margin: 0 4px; border-radius: 6px; font-size: 0.7em;
+            vertical-align: super; cursor: help; position: relative; font-weight: bold;
         }
-        .input-area input:focus { border-color: var(--accent); }
-        .input-area button {
-            background: var(--accent); border: none; width: 45px; height: 45px; border-radius: 12px;
-            color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
+        .citation:hover { background: var(--accent-color); }
+        .citation:hover::after {
+            content: attr(data-tooltip); position: absolute; bottom: 150%; left: 0; transform: translateX(-10%);
+            background: #1a1a24; color: var(--text-secondary); padding: 12px 16px; border-radius: 8px;
+            width: max-content; max-width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            font-size: 0.9rem; line-height: 1.4; white-space: pre-wrap; z-index: 1000; border: 1px solid var(--accent-color);
+            pointer-events: none; text-align: left; font-weight: normal;
         }
-        .input-area button:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
-        .error-text { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; }
+
+        /* Modal */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #1a1a24; border: 1px solid var(--border-color); padding: 2.5rem; border-radius: 16px; width: 450px; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        #notebook-grid { display: grid; gap: 0.5rem; max-height: 300px; overflow-y: auto; margin: 1.5rem 0; }
+        .notebook-item { 
+            background: rgba(255,255,255,0.03); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;
+        }
+        .notebook-item:hover { border-color: var(--accent-color); background: rgba(255,255,255,0.06); }
+
+        .progress-mini { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .progress-mini-fill { height: 100%; width: 0%; background: var(--accent-color); transition: 0.3s; }
+        .rag-indicator { font-size: 0.75rem; color: var(--accent-color); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <h1>Gemma 4 Multimodal Agent</h1>
-                <p class="subtitle">Secure, local-first RAG + Vision + Audio via WebGPU</p>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">G4</div>
+                <span>Gemma 4 Local</span>
             </div>
-        </header>
-        <main id="app">
-            <div id="setup-container" class="card glass">
-                <div class="status-box">
-                    <h2 id="status-text">Initialize AI Engine</h2>
-                    <p class="status-label">Downloads Models 100% in-browser. Fast inference via WebGPU.</p>
+
+            <div class="nav-section" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; flex: 0;">
+                <span class="section-label">Cuaderno Activo</span>
+                <button id="switch-notebook-btn" class="secondary-btn" style="justify-content: space-between; background: rgba(124, 77, 255, 0.1);">
+                    <span id="current-notebook-name">Mi Espacio</span>
+                    <span>📂</span>
+                </button>
+            </div>
+
+            <div class="nav-section">
+                <span class="section-label">Tus Documentos</span>
+                <button id="add-docs-btn" class="secondary-btn" style="padding: 0.5rem; margin-bottom: 0.5rem;">+ Subir PDF / TXT</button>
+                <div id="docs-list" class="docs-list">
+                    <p class="empty-hint">Sin documentos</p>
                 </div>
+            </div>
+
+            <div class="status-section">
+                <div class="status-item">
+                    <span class="label" id="engine-status-label">WebGPU Engine</span>
+                    <span id="engine-status" class="status-value"><span class="dot red"></span> Despierto</span>
+                </div>
+                <div class="progress-mini"><div id="progress-llm" class="progress-mini-fill"></div></div>
                 
-                <div class="status-grid">
-                    <div class="status-item">
-                        <div class="status-label">Embedding (MiniLM-L6)</div>
-                        <div class="progress-bar-container"><div id="progress-embedding" class="progress-fill"></div></div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">Gemma 4 Multimodal</div>
-                        <div class="progress-bar-container"><div id="progress-llm" class="progress-fill"></div></div>
-                    </div>
-                </div>
-                <div class="model-selector-container">
-                    <label for="model-select" class="status-label">Select Model Variant:</label>
-                    <select id="model-select" class="glass-select">
-                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Audio/Vision Support)</option>
-                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - Slower, Audio/Vision Support)</option>
+                <div class="status-item" style="margin-top: 5px;">
+                    <span class="label">Modelo</span>
+                    <select id="model-select" class="dropdown">
+                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B IT)</option>
+                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B IT)</option>
                     </select>
                 </div>
-                <button id="init-btn" class="primary-btn">Initialize Local AI Engine</button>
-                <p id="error-message" class="error-text" style="display: none;"></p>
+                <button id="init-btn" class="secondary-btn" style="margin-top: 0.5rem; font-weight: bold; background: var(--accent-color);">Inicializar IA</button>
             </div>
-            <div id="chat-container" class="hidden">
-                <!-- RAG Context Sidebar -->
-                <aside class="card glass sidebar">
-                    <h3>📚 Local Knowledge (RAG)</h3>
-                    <p class="status-label">Upload PDFs or TXTs to give the model persistent context memory.</p>
-                    
-                    <div class="upload-rag-zone" id="drop-zone-rag">
-                        📁 Drop / Click to add Docs
-                    </div>
-                    <input type="file" id="file-input-rag" multiple accept=".txt,.md,.pdf" style="display: none;">
-                    
-                    <ul id="docs-list" style="list-style: none; margin-top: 1rem;">
-                        <p class="hint status-label">No documents indexed yet.</p>
-                    </ul>
-                </aside>
-                <!-- Central Chat Area -->
-                <div class="chat-main">
-                    <div class="card glass chat-card">
-                        <div class="chat-header">
-                            <h3>Conversation</h3>
-                            <button id="clear-chat-btn">🗑️ Clear Chat</button>
-                        </div>
-                        
-                        <div id="chat-history">
-                            <div class="message ai">
-                                <div class="avatar">G4</div>
-                                <div class="content">Hello! I am ready. You can ask me questions about your RAG documents, or upload an image/audio on the right panel to analyze it!</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Media Preview Tray -->
-                        <div class="preview-tray empty" id="preview-tray"></div>
-                        <div class="input-area">
-                            <input type="text" id="user-input" placeholder="Type a message or ask to describe attachments..." autocomplete="off">
-                            <button id="send-btn">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                            </button>
-                        </div>
-                    </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-chat">
+            <header class="chat-header">
+                <h1>Conversación Inteligente</h1>
+                <div class="header-actions">
+                    <button id="clear-chat-btn" title="Limpiar Chat">🗑️</button>
                 </div>
-                <!-- Right Sidebar (Media Attachments for Multimodal) -->
-                <aside class="card glass sidebar">
-                    <h3 style="color: #34d399">👁️🗨️ Attach Media</h3>
-                    <p class="status-label">Add an Image or Audio to prompt the multimodal capacities of Gemma 4.</p>
-                    
-                    <div class="upload-media-zone" id="drop-zone-media">
-                        🖼️ Drop / Click to attach Photo or Audio
-                    </div>
-                    <input type="file" id="file-input-media" accept="image/*,audio/wav" style="display: none;">
-                    
-                    <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
-                        * Attachments are passed uniquely in the next prompt, they do not persist like RAG docs.
-                        <br><br>
-                        * Supported Audio: .wav formats (max 30s)
-                        <br>
-                        * Supported Images: .jpg, .png, .webp
-                    </div>
-                </aside>
+            </header>
+
+            <div id="chat-history" class="chat-history">
+                <div class="message assistant">
+                    ¡Bienvenido! Este es tu entorno **Gemma 4** totalmente local. Crea cuadernos, sube PDFs y chatea con total privacidad.
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div id="rag-status" class="rag-indicator hidden">
+                    <span>🔍</span> <span id="rag-status-text">Buscando contexto relevante...</span>
+                </div>
+                
+                <div id="preview-tray" class="preview-tray hidden"></div>
+
+                <div class="input-wrapper">
+                    <label for="media-upload" class="secondary-btn" style="padding: 0.5rem; width: 40px; border-radius: 8px;" title="Adjuntar Imagen / Audio">
+                        🖼️
+                    </label>
+                    <input type="file" id="media-upload" accept="image/*,audio/wav" style="display: none;">
+                    <textarea id="user-input" placeholder="Pregunta algo sobre tus documentos..." rows="1"></textarea>
+                    <button id="send-btn" disabled>🚀</button>
+                </div>
             </div>
         </main>
-        <footer style="text-align: center; margin-top: 1.5rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-            Created by <strong>Norberto Martín Afonso</strong>. Follow me on X <a href="https://x.com/NorbertoMartnAf" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 500;">@NorbertoMartnAf</a> and on Github <a href="https://github.com/nmarafo" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 500;">@nmarafo</a>
-        </footer>
     </div>
 
-    <!-- MAIN APP SCRIPT -->
-    <script type="module">
-        import { create, insert, search } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+    <!-- Notebook Modal -->
+    <div id="notebook-modal" class="overlay hidden">
+        <div class="modal-content">
+            <h2 style="font-family: 'Outfit', sans-serif; text-align: center;">Mis Cuadernos</h2>
+            <div id="notebook-grid"></div>
+            <div style="display: flex; gap: 0.5rem; padding-top: 1rem;">
+                <input type="text" id="new-notebook-input" placeholder="Nombre..." style="flex: 1; background: #000; border: 1px solid var(--border-color); color: white; padding: 0.6rem; border-radius: 8px; outline: none;">
+                <button id="create-notebook-btn" class="secondary-btn" style="width: auto; background: var(--accent-color); font-weight: bold;">Crear +</button>
+            </div>
+            <button onclick="document.getElementById('notebook-modal').classList.add('hidden')" style="margin-top: 1.5rem; width: 100%; background: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.5rem; border-radius: 8px; cursor: pointer;">Cerrar</button>
+        </div>
+    </div>
 
-        // 1. Vector DB Implementation
-        class VectorDB {
-            constructor() { this.db = null; this.isInitialized = false; }
-            async init() {
-                if (this.isInitialized) return;
-                this.db = await create({ 
-                    schema: { text: 'string', fileName: 'string', embedding: 'vector[384]' }, 
-                    indexStyles: { embedding: 'cosine' } 
+    <script type="module">
+        import { create, insert, search, removeMultiple } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+
+        // --- Database & Workspaces ---
+        class WorkspaceDB {
+            constructor() { this.currentNB = 'Mi Espacio'; this.oramaInstances = {}; }
+            
+            async getDB(name) {
+                if (this.oramaInstances[name]) return this.oramaInstances[name];
+                this.oramaInstances[name] = await create({
+                    schema: { text: 'string', fileName: 'string', embedding: 'vector[384]', metadata: 'string' },
+                    indexStyles: { embedding: 'cosine' }
                 });
-                this.isInitialized = true;
+                return this.oramaInstances[name];
             }
-            async addDocument(text, fileName, embedding) {
-                if (!this.isInitialized) await this.init();
-                return await insert(this.db, { text, fileName, embedding });
+
+            async addDoc(name, text, fileName, embedding, metadata) {
+                const db = await this.getDB(name);
+                return await insert(db, { text, fileName, embedding, metadata });
             }
-            async query(vector, limit = 5) {
-                const results = await search(this.db, { 
-                    mode: 'vector', 
-                    vector: { value: vector, property: 'embedding' }, 
-                    similarity: 0.5, 
-                    limit 
+
+            async query(name, vector, limit = 5) {
+                const db = await this.getDB(name);
+                const results = await search(db, {
+                    mode: 'vector', vector: { value: vector, property: 'embedding' },
+                    similarity: 0.5, limit
                 });
-                return results.hits.map(hit => ({ text: hit.document.text, fileName: hit.document.fileName, score: hit.score }));
+                return results.hits.map(h => ({ 
+                    text: h.document.text, 
+                    fileName: h.document.fileName, 
+                    metadata: h.document.metadata,
+                    score: h.score 
+                }));
             }
         }
-        const db = new VectorDB();
+        const wsDB = new WorkspaceDB();
 
-        // 2. Web Worker logic
+        // --- State Management ---
+        let notebooks = JSON.parse(localStorage.getItem('g4_notebooks') || '["Mi Espacio"]');
+        let currentNotebook = localStorage.getItem('g4_current_notebook') || 'Mi Espacio';
+        let isReady = false;
+        let activeAttachments = [];
+
+        const statusLabel = document.getElementById('engine-status');
+        const progressFill = document.getElementById('progress-llm');
+        const currentNBName = document.getElementById('current-notebook-name');
+        const docsList = document.getElementById('docs-list');
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const ragStatus = document.getElementById('rag-status');
+
+        function saveState() {
+            localStorage.setItem('g4_notebooks', JSON.stringify(notebooks));
+            localStorage.setItem('g4_current_notebook', currentNotebook);
+        }
+
+        // --- Worker Logic ---
         const workerBlobCode = `
             let Transformers = null;
-            let processor = null;
             let model = null;
+            let processor = null;
             let embeddingPipeline = null;
-            let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
-
-            self.onerror = (e) => {
-                self.postMessage({ action: 'error', payload: { message: "Worker Global Error: " + e.message + ". TIP: If on file://, use a server." } });
-            };
+            let CURRENT_MODEL = '';
 
             self.onmessage = async (e) => {
                 const { action, payload } = e.data;
                 try {
                     if (action === 'init') {
-                        if (payload?.modelId) CURRENT_LLM_MODEL = payload.modelId;
-                        self.postMessage({ action: 'status', payload: { text: 'Waking up AI Engine...' } });
-                        
-                        // --- DYNAMIC ESM IMPORT ---
+                        CURRENT_MODEL = payload.modelId;
                         if (!Transformers) {
-                            try {
-                                Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
-                            } catch (err) {
-                                throw new Error("Security policy blocked Transformers.js. Please use a local server like Live Server.");
-                            }
+                            Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1');
                         }
-                        
                         const { env } = Transformers;
                         env.allowLocalModels = false;
                         env.useBrowserCache = true;
-                        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
-                        
-                        await initModels();
+                        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/';
+
+                        // Embedding
+                        self.postMessage({ action: 'status', payload: { text: 'Loading Embedding...' } });
+                        embeddingPipeline = await Transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { device: 'webgpu' });
+
+                        // Gemma 4
+                        self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4...' } });
+                        processor = await Transformers.AutoProcessor.from_pretrained(CURRENT_MODEL);
+                        model = await Transformers.Gemma4ForConditionalGeneration.from_pretrained(CURRENT_MODEL, {
+                            dtype: "q4f16", device: 'webgpu',
+                            progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { p: p.progress } }); }
+                        });
+
+                        await model.generate({ ...await processor("Warmup"), max_new_tokens: 1 });
+                        self.postMessage({ action: 'ready' });
+
                     } else if (action === 'embed') {
-                        const output = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
-                        self.postMessage({ action: 'embed_result', payload: { vector: Array.from(output.data) } });
+                        const out = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
+                        self.postMessage({ action: 'embed_result', payload: { vector: Array.from(out.data) } });
                     } else if (action === 'generate') {
-                        await generateResponse(payload.prompt, payload.context, payload.mediaItems);
+                        await generateResponse(payload.prompt, payload.context, payload.media);
                     } else if (action === 'cleanup') {
                         if (model) await model.dispose();
                         if (embeddingPipeline) await embeddingPipeline.dispose();
@@ -463,162 +395,99 @@
                 }
             };
 
-            async function initModels() {
-                const { pipeline, AutoProcessor, Gemma4ForConditionalGeneration } = Transformers;
-                
-                self.postMessage({ action: 'status', payload: { text: 'Loading Embedding Model...' } });
-                embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
-                    device: 'webgpu',
-                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'embedding', progress: p.progress } }); }
+            async function generateResponse(text, context, media = []) {
+                const streamer = new Transformers.TextStreamer(processor.tokenizer, {
+                    skip_prompt: true, skip_special_tokens: true,
+                    callback_function: (t) => { self.postMessage({ action: 'chunk', payload: { text: t } }); }
                 });
 
-                self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4 Processor...' } });
-                processor = await AutoProcessor.from_pretrained(CURRENT_LLM_MODEL);
+                const sysPrompt = !context ? "Eres un asistente amable." : "Usa el contexto para responder detalladamente. Cita las fuentes usando [1], [2].\\n\\nCONTEXTO:\\n" + context;
                 
-                self.postMessage({ action: 'status', payload: { text: 'Loading Gemma 4 Model...' } });
-                model = await Gemma4ForConditionalGeneration.from_pretrained(CURRENT_LLM_MODEL, { 
-                    dtype: "q4f16",
-                    device: 'webgpu',
-                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } }); }
-                });
-
-                self.postMessage({ action: 'ready' });
-            }
-
-            async function generateResponse(userPrompt, context, mediaItems = []) {
-                try {
-                    const { load_image, read_audio, TextStreamer } = Transformers;
-                    
-                    const isGeneral = !context || context.includes('No context');
-                    const sysPrompt = isGeneral 
-                        ? "Act as a helpful assistant. Always respond in Spanish." 
-                        : "You are an assistant. Answer primarily using the provided context. Always respond in Spanish.\\n\\nCONTEXT:\\n" + context;
-
-                    let userContentBlock = [];
-                    let processedImages = [];
-                    let processedAudio = [];
-
-                    for(const media of mediaItems) {
-                        if(media.type === 'image') {
-                            const img = await load_image(media.data);
-                            processedImages.push(img);
-                            userContentBlock.push({ type: "image", image: img });
-                        } else if(media.type === 'audio') {
-                            const aud = await read_audio(media.data);
-                            processedAudio.push(aud);
-                            userContentBlock.push({ type: "audio", audio: aud });
-                        }
-                    }
-
-                    userContentBlock.push({ type: "text", text: userPrompt || "Describe the contents of this file." });
-
-                    const messages = [
-                        { role: 'system', content: sysPrompt },
-                        { role: 'user', content: userContentBlock }
-                    ];
-
-                    const prompt = processor.apply_chat_template(messages, { enable_thinking: false, add_generation_prompt: true });
-                    
-                    let inputs;
-                    const imgArg = processedImages.length === 1 ? processedImages[0] : processedImages.length > 1 ? processedImages : null;
-                    const audArg = processedAudio.length === 1 ? processedAudio[0] : processedAudio.length > 1 ? processedAudio : null;
-                    
-                    if (imgArg && audArg) inputs = await processor(prompt, imgArg, audArg);
-                    else if (imgArg) inputs = await processor(prompt, imgArg);
-                    else if (audArg) inputs = await processor(prompt, null, audArg);
-                    else inputs = await processor(prompt);
-
-                    let fullOutputText = "";
-                    const streamer = new TextStreamer(processor.tokenizer, {
-                        skip_prompt: true,
-                        skip_special_tokens: true,
-                        callback_function: (text) => {
-                            fullOutputText += text;
-                            self.postMessage({ action: 'chunk', payload: { text: fullOutputText } });
-                        }
-                    });
-
-                    await model.generate({
-                        ...inputs,
-                        max_new_tokens: 1024,
-                        do_sample: false,
-                        streamer: streamer
-                    });
-
-                    self.postMessage({ action: 'generate_complete', payload: { text: fullOutputText } });
-                } catch (err) {
-                    self.postMessage({ action: 'error', payload: { message: "Generation error: " + err.message } });
+                let content = [];
+                for(const m of media) {
+                    if(m.type === 'image') content.push({ type: 'image', image: await Transformers.load_image(m.data) });
+                    else if(m.type === 'audio') content.push({ type: 'audio', audio: await Transformers.read_audio(m.data) });
                 }
+                content.push({ type: 'text', text: text || "Describe el contenido." });
+
+                const inputs = await processor(processor.apply_chat_template([
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: content }
+                ], { add_generation_prompt: true }));
+
+                const out = await model.generate({ ...inputs, max_new_tokens: 1024, do_sample: false, streamer });
+                self.postMessage({ action: 'done', payload: { text: out[0].generated_text } });
             }
         `;
+
         const blob = new Blob([workerBlobCode], { type: 'application/javascript' });
         const worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
 
-        // 3. UI Logic
-        const setupContainer = document.getElementById('setup-container');
-        const chatContainer = document.getElementById('chat-container');
-        const initBtn = document.getElementById('init-btn');
-        const statusText = document.getElementById('status-text');
-        const errorMessage = document.getElementById('error-message');
-        const progresses = { embedding: document.getElementById('progress-embedding'), llm: document.getElementById('progress-llm') };
-        const userInput = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
-        const chatHistory = document.getElementById('chat-history');
-        const previewTray = document.getElementById('preview-tray');
-        const docsList = document.getElementById('docs-list');
-        const clearChatBtn = document.getElementById('clear-chat-btn');
+        // --- Structural Chunking ---
+        function structuralChunkText(text) {
+            const chunks = [];
+            let currentTitulo = 'General';
+            let currentArticulo = '';
+            let buffer = '';
 
-        let isReady = false;
-        let activeMediaAttachments = [];
+            const push = () => {
+                if (buffer.trim().length > 50) {
+                    const header = `[ESTRUCTURA: ${currentTitulo}${currentArticulo ? ' | ' + currentArticulo : ''}]`;
+                    chunks.push(`${header}\n${buffer.trim()}`);
+                }
+                buffer = '';
+            };
 
-        initBtn.onclick = () => {
-            initBtn.disabled = true; errorMessage.style.display='none';
+            text.split('\n').forEach(line => {
+                const l = line.trim();
+                if (!l) return;
+                if (l.match(/^(?:TÍTULO|Título)\s+[A-ZIVX]+/i)) { push(); currentTitulo = l; currentArticulo = ''; }
+                else if (l.match(/^(?:Artículo|Art\.)\s+\d+/i)) { push(); currentArticulo = l; }
+                buffer += l + '\n';
+            });
+            push();
+            return chunks;
+        }
+
+        // --- UI Interactions ---
+        document.getElementById('init-btn').onclick = () => {
+            document.getElementById('init-btn').disabled = true;
+            statusLabel.innerHTML = '<span class="dot orange"></span> Cargando...';
             worker.postMessage({ action: 'init', payload: { modelId: document.getElementById('model-select').value } });
         };
 
-        window.addEventListener('beforeunload', () => {
-            if (worker) {
-                worker.postMessage({ action: 'cleanup' });
-                worker.terminate();
-            }
-        });
+        window.addEventListener('beforeunload', () => { worker.postMessage({ action: 'cleanup' }); worker.terminate(); });
 
         worker.onmessage = async (e) => {
             const { action, payload } = e.data;
-            if (action === 'progress') {
-                progresses[payload.model].style.width = `${payload.progress}%`;
-            } else if (action === 'status') {
-                statusText.innerText = payload.text;
-            } else if (action === 'ready') {
-                isReady = true; setupContainer.classList.add('hidden'); chatContainer.classList.remove('hidden'); await db.init();
-            } else if (action === 'chunk') {
-                updateAIChat(payload.text);
-            } else if (action === 'generate_complete') {
-                // Done
-            } else if (action === 'error') {
-                if (isReady) {
-                    updateAIChat(`❌ **Error:** ${payload.message}`);
-                } else {
-                    errorMessage.innerText = payload.message; errorMessage.style.display = 'block'; statusText.innerText = "Error"; initBtn.disabled = false;
-                }
+            if (action === 'status') statusLabel.innerHTML = `<span class="dot orange"></span> ${payload.text}`;
+            else if (action === 'progress') progressFill.style.width = `${payload.p}%`;
+            else if (action === 'ready') { 
+                isReady = true; statusLabel.innerHTML = '<span class="dot green"></span> Listo'; 
+                sendBtn.disabled = false; document.getElementById('init-btn').classList.add('hidden');
+                document.getElementById('engine-status-label').innerText = "WebGPU Activo";
             }
+            else if (action === 'chunk') streamAIChat(payload.text);
+            else if (action === 'done') finalizeAIChat();
+            else if (action === 'error') alert("Error IA: " + payload.message);
         };
 
-        // RAG Handling
-        const dropRAG = document.getElementById('drop-zone-rag');
-        const inputRAG = document.getElementById('file-input-rag');
-        dropRAG.onclick = () => inputRAG.click();
-        
-        inputRAG.onchange = async (e) => {
+        // --- RAG & Docs ---
+        document.getElementById('add-docs-btn').onclick = () => document.getElementById('file-upload').click();
+        const fileUpload = document.createElement('input'); fileUpload.type='file'; fileUpload.id='file-upload'; fileUpload.multiple=true; fileUpload.style.display='none';
+        document.body.appendChild(fileUpload);
+
+        fileUpload.onchange = async (e) => {
             for (const file of e.target.files) {
                 const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
-                const chunks = chunkText(text, 1000, 200);
+                const chunks = structuralChunkText(text);
+                statusLabel.innerHTML = '<span class="dot orange"></span> Indexando...';
                 for (const chunk of chunks) {
                     const vector = await requestEmbedding(chunk);
-                    await db.addDocument(chunk, file.name, vector);
+                    await wsDB.addDoc(currentNotebook, chunk, file.name, vector, currentNotebook);
                 }
-                const li = document.createElement('li'); li.className='doc-item'; li.innerHTML = `📄 ${file.name}`; docsList.appendChild(li);
-                const hint = docsList.querySelector('.hint'); if(hint) hint.remove();
+                statusLabel.innerHTML = '<span class="dot green"></span> Listo';
+                renderDocsUI();
             }
         };
 
@@ -627,77 +496,9 @@
             let text = '';
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                text += content.items.map(item => item.str).join(' ') + '\n';
+                text += (await page.getTextContent()).items.map(item => item.str).join(' ') + '\n';
             }
             return text;
-        }
-
-        function chunkText(text, size, overlap) {
-            const chunks = [];
-            for (let i = 0; i < text.length; i += size - overlap) {
-                chunks.push(text.slice(i, i + size));
-                if (i + size > text.length) break;
-            }
-            return chunks;
-        }
-
-        // Media Handling
-        const dropMedia = document.getElementById('drop-zone-media');
-        const inputMedia = document.getElementById('file-input-media');
-        dropMedia.onclick = () => inputMedia.click();
-
-        inputMedia.onchange = async (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const base64data = ev.target.result;
-                const isImage = file.type.startsWith('image/');
-                const isAudio = file.type.startsWith('audio/');
-                if(!isImage && !isAudio) return;
-                activeMediaAttachments.push({ type: isImage ? 'image' : 'audio', data: base64data });
-                renderPreviewTray();
-            };
-            reader.readAsDataURL(file);
-        };
-
-        function renderPreviewTray() {
-            previewTray.innerHTML = '';
-            if(activeMediaAttachments.length === 0) { previewTray.classList.add('empty'); return; }
-            previewTray.classList.remove('empty');
-            activeMediaAttachments.forEach((m, idx) => {
-                const div = document.createElement('div'); div.className = 'preview-item';
-                div.innerHTML = m.type === 'image' 
-                    ? `<img src="${m.data}"/><button class="remove-preview" onclick="window.removeMedia(${idx})">X</button>`
-                    : `<div class="icon">🎵</div><button class="remove-preview" onclick="window.removeMedia(${idx})">X</button>`;
-                previewTray.appendChild(div);
-            });
-        }
-        window.removeMedia = (idx) => { activeMediaAttachments.splice(idx, 1); renderPreviewTray(); };
-
-        // Chat Logistics
-        sendBtn.onclick = handleChat;
-        userInput.onkeydown = (e) => { if (e.key === 'Enter') handleChat(); };
-
-        async function handleChat() {
-            const prompt = userInput.value.trim(); 
-            if (!isReady || (!prompt && activeMediaAttachments.length === 0)) return;
-            
-            let attachmentsHtml = activeMediaAttachments.map(m => m.type==='image' ? `<img src="${m.data}" style="max-width:200px; display:block; margin: 10px 0;" />` : `<br>🎵 Audio Attached`).join('');
-            appendUserMessage(prompt + attachmentsHtml);
-            userInput.value = '';
-
-            let context = 'No context.';
-            if (prompt) {
-                const vector = await requestEmbedding(prompt);
-                const results = await db.query(vector, 3);
-                if (results.length > 0) context = results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n');
-            }
-
-            worker.postMessage({ action: 'generate', payload: { prompt, context, mediaItems: activeMediaAttachments } });
-            activeMediaAttachments = [];
-            renderPreviewTray();
-            prepareAIChat();
         }
 
         function requestEmbedding(text) {
@@ -708,27 +509,148 @@
             });
         }
 
-        function appendUserMessage(html) {
-            const div = document.createElement('div'); div.className = 'message user';
-            div.innerHTML = `<div class="avatar">U</div><div class="content">${html}</div>`;
-            chatHistory.appendChild(div); chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+        // --- Notebooks Logic ---
+        document.getElementById('switch-notebook-btn').onclick = () => {
+            const grid = document.getElementById('notebook-grid');
+            grid.innerHTML = notebooks.map(nb => `
+                <div class="notebook-item" onclick="window.selectNB('${nb}')">
+                    <span>📖 ${nb}</span>
+                    <button onclick="event.stopPropagation(); window.deleteNB('${nb}')" style="background:none; border:none; color:#ff4d4d; cursor:pointer;">🗑️</button>
+                </div>
+            `).join('');
+            document.getElementById('notebook-modal').classList.remove('hidden');
+        };
 
-        let currentChatResponse = null;
-        function prepareAIChat() {
-            currentChatResponse = document.createElement('div'); currentChatResponse.className = 'message ai';
-            currentChatResponse.innerHTML = `<div class="avatar">G4</div><div class="content"><em>Thinking...</em></div>`;
-            chatHistory.appendChild(currentChatResponse); chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+        window.selectNB = async (name) => {
+            currentNotebook = name;
+            currentNBName.innerText = name;
+            saveState();
+            document.getElementById('notebook-modal').classList.add('hidden');
+            renderDocsUI();
+            chatHistory.innerHTML = `<div class="message assistant">Estás en el cuaderno **${name}**. Chatea o sube documentos.</div>`;
+        };
 
-        function updateAIChat(text) {
-            if (currentChatResponse) {
-                currentChatResponse.querySelector('.content').innerHTML = window.marked.parse(text);
-                chatHistory.scrollTop = chatHistory.scrollHeight;
+        window.deleteNB = (name) => {
+            if (notebooks.length === 1) return alert("Debes tener al menos un cuaderno.");
+            notebooks = notebooks.filter(n => n !== name);
+            if (currentNotebook === name) window.selectNB(notebooks[0]);
+            renderNBGrid();
+        };
+
+        document.getElementById('create-notebook-btn').onclick = () => {
+            const name = document.getElementById('new-notebook-input').value.trim();
+            if (!name || notebooks.includes(name)) return;
+            notebooks.push(name);
+            document.getElementById('new-notebook-input').value = '';
+            window.selectNB(name);
+        };
+
+        // --- Chat & Citations ---
+        let currentAIResponse = '';
+        let currentSourceMap = {};
+
+        sendBtn.onclick = handleChat;
+        userInput.onkeydown = (e) => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); handleChat(); } };
+
+        async function handleChat() {
+            const prompt = userInput.value.trim();
+            if (!isReady || (!prompt && activeAttachments.length === 0)) return;
+            
+            appendMessage('user', prompt + (activeAttachments.length > 0 ? '\n[Archivos adjuntos]' : ''));
+            userInput.value = '';
+
+            let context = '';
+            currentSourceMap = {};
+            if (prompt) {
+                ragStatus.classList.remove('hidden');
+                const v = await requestEmbedding(prompt);
+                const hits = await wsDB.query(currentNotebook, v, 3);
+                if (hits.length > 0) {
+                    context = hits.map((h, i) => {
+                        const id = i + 1;
+                        currentSourceMap[id] = h;
+                        return `[Fuente ${id}]: ${h.text}`;
+                    }).join('\n---\n');
+                }
+                ragStatus.classList.add('hidden');
             }
+
+            worker.postMessage({ action: 'generate', payload: { prompt, context, media: activeAttachments } });
+            activeAttachments = []; renderPreviewTray();
+            prepareAIChat();
         }
 
-        clearChatBtn.onclick = () => { if(confirm('Clear history?')) chatHistory.innerHTML = ''; };
+        function renderMarkdownWithCitations(text) {
+            let html = window.marked.parse(text);
+            return html.replace(/\[(\d+)\]/g, (match, id) => {
+                if (currentSourceMap[id]) {
+                    const h = currentSourceMap[id];
+                    const tooltip = `${h.fileName}\n${h.metadata || ""}\n\n"${h.text.substring(0, 200)}..."`.replace(/"/g, '&quot;');
+                    return `<span class="citation" data-tooltip="${tooltip}">[${id}]</span>`;
+                }
+                return match;
+            });
+        }
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = window.marked.parse(text);
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function prepareAIChat() {
+            currentAIResponse = '';
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = '<em>Escribiendo...</em>';
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function streamAIChat(chunk) {
+            currentAIResponse += chunk;
+            const lastMsg = chatHistory.lastElementChild;
+            lastMsg.innerHTML = renderMarkdownWithCitations(currentAIResponse);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function finalizeAIChat() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // --- Media Handling ---
+        const mediaInput = document.getElementById('media-upload');
+        mediaInput.onchange = (e) => {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                activeAttachments.push({ type: file.type.startsWith('image/') ? 'image' : 'audio', data: ev.target.result });
+                renderPreviewTray();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        function renderPreviewTray() {
+            const tray = document.getElementById('preview-tray');
+            tray.innerHTML = activeAttachments.map((m, i) => `
+                <div class="preview-item">
+                    ${m.type==='image' ? `<img src="${m.data}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.5rem;">🎵</div>'}
+                    <button class="remove-preview" onclick="removeMedia(${i})">X</button>
+                </div>
+            `).join('');
+            tray.classList.toggle('hidden', activeAttachments.length === 0);
+        }
+        window.removeMedia = (i) => { activeAttachments.splice(i, 1); renderPreviewTray(); };
+
+        function renderDocsUI() {
+            // Basic doc list for now
+            docsList.innerHTML = '<p class="empty-hint">Documentos en este espacio guardados en memoria.</p>';
+        }
+
+        document.getElementById('clear-chat-btn').onclick = () => { chatHistory.innerHTML = ''; };
+        currentNBName.innerText = currentNotebook;
     </script>
 </body>
 </html>
