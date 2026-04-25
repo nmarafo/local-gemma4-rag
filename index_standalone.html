@@ -386,11 +386,11 @@
 
     <!-- MAIN APP SCRIPT -->
     <script type="module">
-        import { create, insert, search } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
+        import { create, insert, search, remove } from 'https://cdn.jsdelivr.net/npm/@orama/orama@latest/+esm';
 
         // 1. Vector DB Implementation
         class VectorDB {
-            constructor() { this.db = null; this.isInitialized = false; }
+            constructor() { this.db = null; this.isInitialized = false; this.docIds = {}; this.nameOverrides = {}; }
             async init() {
                 if (this.isInitialized) return;
                 this.db = await create({ 
@@ -401,7 +401,22 @@
             }
             async addDocument(text, fileName, embedding) {
                 if (!this.isInitialized) await this.init();
-                return await insert(this.db, { text, fileName, embedding });
+                const id = await insert(this.db, { text, fileName, embedding });
+                if (!this.docIds[fileName]) this.docIds[fileName] = [];
+                this.docIds[fileName].push(id);
+                return id;
+            }
+            async removeDocument(fileName) {
+                const ids = this.docIds[fileName];
+                if (ids) {
+                    for (const id of ids) {
+                        await remove(this.db, id);
+                    }
+                    delete this.docIds[fileName];
+                }
+            }
+            renameDocument(oldName, newName) {
+                this.nameOverrides[oldName] = newName;
             }
             async query(vector, limit = 5) {
                 const results = await search(this.db, { 
@@ -410,7 +425,7 @@
                     similarity: 0.5, 
                     limit 
                 });
-                return results.hits.map(hit => ({ text: hit.document.text, fileName: hit.document.fileName, score: hit.score }));
+                return results.hits.map(hit => ({ text: hit.document.text, fileName: this.nameOverrides[hit.document.fileName] || hit.document.fileName, score: hit.score }));
             }
         }
         const db = new VectorDB();
@@ -619,7 +634,37 @@
                     const vector = await requestEmbedding(chunk);
                     await db.addDocument(chunk, file.name, vector);
                 }
-                const li = document.createElement('li'); li.className='doc-item'; li.innerHTML = `📄 ${file.name}`; docsList.appendChild(li);
+                const li = document.createElement('li'); 
+                li.className='doc-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.innerText = `📄 ${file.name}`;
+                nameSpan.style.cursor = 'pointer';
+                nameSpan.title = "Click to rename";
+                nameSpan.onclick = () => {
+                    const newName = prompt("Renombrar documento:", nameSpan.innerText.replace('📄 ', ''));
+                    if (newName && newName.trim()) {
+                        db.renameDocument(file.name, newName.trim());
+                        nameSpan.innerText = `📄 ${newName.trim()}`;
+                    }
+                };
+
+                const delBtn = document.createElement('button');
+                delBtn.innerText = 'X';
+                delBtn.title = "Remove document";
+                delBtn.onclick = async () => {
+                    if (confirm("¿Eliminar documento del conocimiento?")) {
+                        await db.removeDocument(file.name);
+                        li.remove();
+                        if (docsList.children.length === 0) {
+                            docsList.innerHTML = '<p class="hint status-label">No documents indexed yet.</p>';
+                        }
+                    }
+                };
+
+                li.appendChild(nameSpan);
+                li.appendChild(delBtn);
+                docsList.appendChild(li);
                 const hint = docsList.querySelector('.hint'); if(hint) hint.remove();
             }
         };
