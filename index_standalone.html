@@ -422,7 +422,7 @@
                 const results = await search(this.db, { 
                     mode: 'vector', 
                     vector: { value: vector, property: 'embedding' }, 
-                    similarity: 0.5, 
+                    similarity: 0.0, 
                     limit 
                 });
                 return results.hits.map(hit => ({ text: hit.document.text, fileName: this.nameOverrides[hit.document.fileName] || hit.document.fileName, score: hit.score }));
