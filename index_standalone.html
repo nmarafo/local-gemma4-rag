@@ -491,8 +491,8 @@
                     
                     const isGeneral = !context || context.includes('No context');
                     const sysPrompt = isGeneral 
-                        ? "Act as a helpful assistant. Always respond in Spanish." 
-                        : "You are an assistant. Answer primarily using the provided context. Always respond in Spanish.\\n\\nIMPORTANTE: Responde de forma muy detallada, extensa y esquemática basándote en el contexto. Debes citar estructuralmente el origen de la afirmación al final de cada frase usando obligatoriamente este formato de corchetes de fuente: [1], [2], correspondientes al número de la Fuente.\\n\\nCONTEXT:\\n" + context;
+                        ? "Eres un asistente útil y amable. Responde siempre en español." 
+                        : "Eres un asistente experto. El texto bajo 'CONTEXTO' contiene los fragmentos extraídos del documento que el usuario acaba de subir. Si el usuario pregunta 'qué ves', 'resume el documento', 'de qué trata' o algo similar, asume que se refiere a este CONTEXTO y descríbelo. NUNCA le pidas que adjunte el documento de nuevo, porque ya lo hizo.\\n\\nIMPORTANTE: Responde de forma muy detallada, extensa y esquemática basándote en el contexto. Debes citar estructuralmente el origen de la afirmación al final de cada frase usando obligatoriamente este formato de corchetes de fuente: [1], [2], correspondientes al número de la Fuente.\\n\\nCONTEXTO:\\n" + context;
 
                     let userContentBlock = [];
                     let processedImages = [];
