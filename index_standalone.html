@@ -628,44 +628,60 @@
         
         inputRAG.onchange = async (e) => {
             for (const file of e.target.files) {
-                const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
-                const chunks = chunkText(text);
-                for (const chunk of chunks) {
-                    const vector = await requestEmbedding(chunk);
-                    await db.addDocument(chunk, file.name, vector);
-                }
+                const hint = docsList.querySelector('.hint'); if(hint) hint.remove();
+                
                 const li = document.createElement('li'); 
                 li.className='doc-item';
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.innerText = `📄 ${file.name}`;
-                nameSpan.style.cursor = 'pointer';
-                nameSpan.title = "Click to rename";
-                nameSpan.onclick = () => {
-                    const newName = prompt("Renombrar documento:", nameSpan.innerText.replace('📄 ', ''));
-                    if (newName && newName.trim()) {
-                        db.renameDocument(file.name, newName.trim());
-                        nameSpan.innerText = `📄 ${newName.trim()}`;
-                    }
-                };
-
-                const delBtn = document.createElement('button');
-                delBtn.innerText = 'X';
-                delBtn.title = "Remove document";
-                delBtn.onclick = async () => {
-                    if (confirm("¿Eliminar documento del conocimiento?")) {
-                        await db.removeDocument(file.name);
-                        li.remove();
-                        if (docsList.children.length === 0) {
-                            docsList.innerHTML = '<p class="hint status-label">No documents indexed yet.</p>';
-                        }
-                    }
-                };
-
-                li.appendChild(nameSpan);
-                li.appendChild(delBtn);
+                li.innerHTML = `<span>⏳ Procesando ${file.name}...</span>`;
                 docsList.appendChild(li);
-                const hint = docsList.querySelector('.hint'); if(hint) hint.remove();
+
+                try {
+                    const text = file.type === 'application/pdf' ? await extractPdf(file) : await file.text();
+                    const chunks = chunkText(text);
+                    
+                    if (chunks.length === 0) {
+                        li.innerHTML = `<span style="color:#ef4444">❌ ${file.name} (Sin texto)</span>`;
+                        setTimeout(() => li.remove(), 4000);
+                        continue;
+                    }
+
+                    for (let i = 0; i < chunks.length; i++) {
+                        li.innerHTML = `<span>⚙️ Vectorizando... ${i+1}/${chunks.length}</span>`;
+                        const vector = await requestEmbedding(chunks[i]);
+                        await db.addDocument(chunks[i], file.name, vector);
+                    }
+
+                    li.innerHTML = '';
+                    const nameSpan = document.createElement('span');
+                    nameSpan.innerText = `📄 ${file.name} (${chunks.length} chks)`;
+                    nameSpan.style.cursor = 'pointer';
+                    nameSpan.title = "Click to rename";
+                    nameSpan.onclick = () => {
+                        const newName = prompt("Renombrar documento:", file.name);
+                        if (newName && newName.trim()) {
+                            db.renameDocument(file.name, newName.trim());
+                            nameSpan.innerText = `📄 ${newName.trim()} (${chunks.length} chks)`;
+                        }
+                    };
+
+                    const delBtn = document.createElement('button');
+                    delBtn.innerText = 'X';
+                    delBtn.title = "Remove document";
+                    delBtn.onclick = async () => {
+                        if (confirm("¿Eliminar documento del conocimiento?")) {
+                            await db.removeDocument(file.name);
+                            li.remove();
+                            if (docsList.children.length === 0) {
+                                docsList.innerHTML = '<p class="hint status-label">No documents indexed yet.</p>';
+                            }
+                        }
+                    };
+
+                    li.appendChild(nameSpan);
+                    li.appendChild(delBtn);
+                } catch (err) {
+                    li.innerHTML = `<span style="color:#ef4444">❌ Error: ${err.message}</span>`;
+                }
             }
         };
 
