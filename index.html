@@ -490,9 +490,7 @@
                     const { load_image, read_audio, TextStreamer } = Transformers;
                     
                     const isGeneral = !context || context.includes('No context');
-                    const sysPrompt = isGeneral 
-                        ? "Eres un asistente útil y amable. Responde siempre en español." 
-                        : "Eres un asistente experto. El texto bajo 'CONTEXTO' contiene los fragmentos extraídos del documento que el usuario acaba de subir. Si el usuario pregunta 'qué ves', 'resume el documento', 'de qué trata' o algo similar, asume que se refiere a este CONTEXTO y descríbelo. NUNCA le pidas que adjunte el documento de nuevo, porque ya lo hizo.\\n\\nIMPORTANTE: Responde de forma muy detallada, extensa y esquemática basándote en el contexto. Debes citar estructuralmente el origen de la afirmación al final de cada frase usando obligatoriamente este formato de corchetes de fuente: [1], [2], correspondientes al número de la Fuente.\\n\\nCONTEXTO:\\n" + context;
+                    const sysPrompt = "Eres un asistente experto. Responde siempre en español. Si el usuario hace referencia a un documento y tienes 'CONTEXTO DEL DOCUMENTO' en el mensaje, asume que ese es el documento y responde basándote ÚNICAMENTE en él. NUNCA le pidas que adjunte un documento si ya tienes contexto.\\n\\nIMPORTANTE: Si usas el contexto, debes citar el origen al final de cada afirmación usando este formato: [Fuente 1], [Fuente 2].";
 
                     let userContentBlock = [];
                     let processedImages = [];
@@ -510,7 +508,11 @@
                         }
                     }
 
-                    userContentBlock.push({ type: "text", text: userPrompt || "Describe the contents of this file." });
+                    let finalUserText = userPrompt || "Describe the contents of this file.";
+                    if (!isGeneral) {
+                        finalUserText = "CONTEXTO DEL DOCUMENTO:\\n" + context + "\\n\\nINSTRUCCIÓN DEL USUARIO:\\n" + finalUserText;
+                    }
+                    userContentBlock.push({ type: "text", text: finalUserText });
 
                     const messages = [
                         { role: 'system', content: sysPrompt },
