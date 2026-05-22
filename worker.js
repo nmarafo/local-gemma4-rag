@@ -90,8 +90,12 @@ async function generateResponse(userPrompt, context) {
   const isGeneralKnowledge = !context || context === 'No relevant context found in local documents.';
   
   const systemInstruction = isGeneralKnowledge 
-    ? "Act as a helpful AI assistant. Answer using your own knowledge."
-    : `Answer based on the following context. If the answer is not in the context, you MAY use your own knowledge but clearly state that the information was not found in the documents.\n\nCONTEXT:\n${context}`;
+    ? "Eres un asistente de IA útil. Responde siempre en español. Responde usando tus propios conocimientos."
+    : `Eres un asistente experto. Responde siempre en español. Responde basándote en el siguiente contexto. Si la respuesta no está en el contexto, puedes usar tus propios conocimientos pero indica claramente que la información no se encontró en los documentos.
+IMPORTANTE: Si usas el contexto, debes citar el origen al final de cada afirmación usando este formato exacto: [Fuente 1], [Fuente 2].
+
+CONTEXTO:
+${context}`;
 
   const messages = [
     { 

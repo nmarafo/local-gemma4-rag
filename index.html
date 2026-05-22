@@ -299,6 +299,87 @@
         }
         .input-area button:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
         .error-text { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; }
+
+        /* Tooltip references CSS */
+        .source-tooltip-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .source-ref-trigger {
+            color: var(--accent);
+            font-weight: 600;
+            padding: 0.1rem 0.35rem;
+            border-radius: 6px;
+            background: rgba(187, 139, 255, 0.12);
+            border: 1px solid rgba(187, 139, 255, 0.25);
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+        .source-tooltip-wrapper:hover .source-ref-trigger {
+            background: rgba(187, 139, 255, 0.25);
+            box-shadow: 0 0 8px rgba(187, 139, 255, 0.4);
+        }
+        .source-tooltip-box {
+            position: absolute;
+            bottom: 130%;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            width: 280px;
+            background: rgba(15, 17, 21, 0.98);
+            border: 1px solid rgba(187, 139, 255, 0.4);
+            border-radius: 12px;
+            padding: 0.85rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .source-tooltip-box::after {
+            content: "";
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background: rgba(15, 17, 21, 0.98);
+            border-right: 1px solid rgba(187, 139, 255, 0.4);
+            border-bottom: 1px solid rgba(187, 139, 255, 0.4);
+        }
+        .source-tooltip-wrapper:hover .source-tooltip-box {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+        .source-tooltip-title {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .source-tooltip-snippet {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-style: italic;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -603,6 +684,7 @@
 
         let isReady = false;
         let activeMediaAttachments = [];
+        let currentChatSources = [];
 
         initBtn.onclick = () => {
             initBtn.disabled = true; errorMessage.style.display='none';
@@ -829,12 +911,15 @@
             if (prompt) {
                 const vector = await requestEmbedding(prompt);
                 const results = await db.query(vector, 3);
+                currentChatSources = results;
                 if (results.length > 0) {
                     context = results.map((r, i) => {
                         const srcId = i + 1;
-                        return `[Fuente ${srcId}]: ${r.text}`;
+                        return `[Fuente ${srcId}]: (Archivo: ${r.fileName}): ${r.text}`;
                     }).join('\n---\n');
                 }
+            } else {
+                currentChatSources = [];
             }
 
             worker.postMessage({ action: 'generate', payload: { prompt, context, mediaItems: activeMediaAttachments } });
@@ -864,9 +949,42 @@
             chatHistory.appendChild(currentChatResponse); chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function renderCitations(text) {
+            let html = window.marked.parse(text);
+            html = html.replace(/\[Fuente\s+(\d+)\]/gi, (match, numStr) => {
+                const idx = parseInt(numStr, 10) - 1;
+                if (idx >= 0 && idx < currentChatSources.length) {
+                    const src = currentChatSources[idx];
+                    const title = escapeHtml(src.fileName);
+                    const snippet = escapeHtml(src.text.slice(0, 150)) + (src.text.length > 150 ? '...' : '');
+                    return `
+                        <span class="source-tooltip-wrapper">
+                            <span class="source-ref-trigger">${match}</span>
+                            <span class="source-tooltip-box">
+                                <span class="source-tooltip-title">${title}</span>
+                                <span class="source-tooltip-snippet">${snippet}</span>
+                            </span>
+                        </span>
+                    `.replace(/\s+/g, ' ').trim();
+                }
+                return match;
+            });
+            return html;
+        }
+
         function updateAIChat(text) {
             if (currentChatResponse) {
-                currentChatResponse.querySelector('.content').innerHTML = window.marked.parse(text);
+                currentChatResponse.querySelector('.content').innerHTML = renderCitations(text);
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
         }

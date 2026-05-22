@@ -20,6 +20,7 @@ const worker = new Worker(new URL('./worker.js?v=401', import.meta.url), { type:
 
 let isReady = false;
 let currentChatResponse = null;
+let currentChatSources = [];
 let indexedFiles = new Set();
 const modelSelect = document.getElementById('model-select');
 const clearChatBtn = document.getElementById('clear-chat-btn');
@@ -207,8 +208,9 @@ async function handleChat() {
 
   // 2. Retrieve Context from Orama
   const results = await db.query(queryVector, 5);
+  currentChatSources = results;
   const context = results.length > 0 
-    ? results.map(r => `[Source: ${r.fileName}]: ${r.text}`).join('\n---\n')
+    ? results.map((r, i) => `[Fuente ${i + 1}]: (Archivo: ${r.fileName}): ${r.text}`).join('\n---\n')
     : 'No relevant context found in local documents.';
 
   // 3. Generate with LLM (Pass sources to UI renderer)
@@ -307,10 +309,43 @@ window.copyToClipboard = async (btn) => {
   }
 };
 
+function escapeHtml(unsafe) {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderCitations(text) {
+  let html = window.marked ? window.marked.parse(text) : text;
+  html = html.replace(/\[Fuente\s+(\d+)\]/gi, (match, numStr) => {
+    const idx = parseInt(numStr, 10) - 1;
+    if (idx >= 0 && idx < currentChatSources.length) {
+      const src = currentChatSources[idx];
+      const title = escapeHtml(src.fileName);
+      const snippet = escapeHtml(src.text.slice(0, 150)) + (src.text.length > 150 ? '...' : '');
+      return `
+        <span class="source-tooltip-wrapper">
+          <span class="source-ref-trigger">${match}</span>
+          <span class="source-tooltip-box">
+            <span class="source-tooltip-title">${title}</span>
+            <span class="source-tooltip-snippet">${snippet}</span>
+          </span>
+        </span>
+      `.replace(/\s+/g, ' ').trim();
+    }
+    return match;
+  });
+  return html;
+}
+
 function updateAIChat(text) {
   if (currentChatResponse) {
     const contentDiv = currentChatResponse.querySelector('.content');
-    contentDiv.innerHTML = window.marked ? window.marked.parse(text) : text;
+    contentDiv.innerHTML = renderCitations(text);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 }
@@ -318,7 +353,7 @@ function updateAIChat(text) {
 function finalizeAIChat(text) {
   if (currentChatResponse) {
     const contentDiv = currentChatResponse.querySelector('.content');
-    contentDiv.innerHTML = window.marked ? window.marked.parse(text) : text;
+    contentDiv.innerHTML = renderCitations(text);
     chatHistory.scrollTop = chatHistory.scrollHeight;
   }
 }
