@@ -52,6 +52,24 @@ h1 {
     font-size: 1.1rem;
 }
 
+.version-tag {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 0.75rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 8px;
+    background: rgba(187, 139, 255, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(187, 139, 255, 0.25);
+    -webkit-text-fill-color: initial;
+    text-fill-color: initial;
+    background-clip: border-box;
+    -webkit-background-clip: border-box;
+    letter-spacing: normal;
+}
+
 #sync-indicator {
     padding: 0.5rem;
     border-radius: 50%;
