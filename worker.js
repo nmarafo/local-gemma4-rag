@@ -1,4 +1,4 @@
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.1?v=401';
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest';
 
 // Configure environment
 env.allowLocalModels = false;
@@ -65,7 +65,7 @@ async function initModels() {
   // 2. Load Selected Gemma LLM
   generatorPipeline = await pipeline('text-generation', CURRENT_LLM_MODEL, {
     device: 'webgpu',
-    dtype: 'q4',
+    dtype: 'q4f16',
     progress_callback: (p) => {
       if (p.status === 'progress') {
         self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } });

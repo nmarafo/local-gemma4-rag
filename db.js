@@ -62,7 +62,7 @@ export class VectorDB {
         value: vector,
         property: 'embedding',
       },
-      similarity: 0.5,
+      similarity: 0.0,
       limit: limit,
     });
 

@@ -461,7 +461,6 @@
                         const { env } = Transformers;
                         env.allowLocalModels = false;
                         env.useBrowserCache = true;
-                        env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
                         
                         await initModels();
                     } else if (action === 'embed') {
@@ -687,13 +686,16 @@
 
         async function extractPdf(file) {
             const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-            let text = '';
+            const pagesPromises = [];
             for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                text += content.items.map(item => item.str).join(' ') + '\n';
+                pagesPromises.push((async () => {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    return content.items.map(item => item.str).join(' ') + '\n';
+                })());
             }
-            return text;
+            const pagesText = await Promise.all(pagesPromises);
+            return pagesText.join('');
         }
 
         function chunkText(text) {
