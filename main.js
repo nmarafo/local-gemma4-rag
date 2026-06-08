@@ -25,12 +25,105 @@ let indexedFiles = new Set();
 const modelSelect = document.getElementById('model-select');
 const clearChatBtn = document.getElementById('clear-chat-btn');
 
+// Backend state
+let activeBackend = 'webgpu';
+
+const tabWebgpu = document.getElementById('tab-webgpu');
+const tabOllama = document.getElementById('tab-ollama');
+const contentWebgpu = document.getElementById('content-webgpu');
+const contentOllama = document.getElementById('content-ollama');
+
+const ollamaConnectBtn = document.getElementById('ollama-connect-btn');
+const ollamaUrlInput = document.getElementById('ollama-url-input');
+const ollamaModelSelect = document.getElementById('ollama-model-select');
+
+if (tabWebgpu && tabOllama) {
+  tabWebgpu.onclick = () => {
+    activeBackend = 'webgpu';
+    tabWebgpu.classList.add('active');
+    tabOllama.classList.remove('active');
+    contentWebgpu.classList.add('active');
+    contentOllama.classList.remove('active');
+    initBtn.disabled = false;
+    statusText.innerText = 'Initialize WebGPU AI';
+  };
+
+  tabOllama.onclick = () => {
+    activeBackend = 'ollama';
+    tabOllama.classList.add('active');
+    tabWebgpu.classList.remove('active');
+    contentOllama.classList.add('active');
+    contentWebgpu.classList.remove('active');
+    
+    if (!ollamaModelSelect.value) {
+      initBtn.disabled = true;
+      statusText.innerText = 'Please connect to local Ollama and select a model.';
+    } else {
+      initBtn.disabled = false;
+      statusText.innerText = 'Initialize Ollama Local AI';
+    }
+  };
+}
+
+if (ollamaConnectBtn) {
+  ollamaConnectBtn.onclick = async () => {
+    const url = ollamaUrlInput.value.trim();
+    ollamaConnectBtn.disabled = true;
+    ollamaConnectBtn.innerText = 'Connecting...';
+    try {
+      const res = await fetch(`${url}/api/tags`);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const data = await res.json();
+      
+      ollamaModelSelect.innerHTML = '';
+      if (data.models && data.models.length > 0) {
+        data.models.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.name;
+          option.innerText = `${model.name} (${model.details?.parameter_size || 'Unknown size'})`;
+          ollamaModelSelect.appendChild(option);
+        });
+        ollamaModelSelect.disabled = false;
+        initBtn.disabled = false;
+        statusText.innerText = 'Connected to Ollama. Click Initialize to start.';
+      } else {
+        ollamaModelSelect.innerHTML = '<option value="">No models found. Run "ollama pull gemma4:12b"</option>';
+        ollamaModelSelect.disabled = true;
+        initBtn.disabled = true;
+        statusText.innerText = 'Ollama connected, but no models found.';
+      }
+    } catch (err) {
+      alert(`Could not connect to Ollama at ${url}: ${err.message}. Make sure Ollama is running and OLLAMA_ORIGINS="*" is set.`);
+      statusText.innerText = 'Connection to Ollama failed.';
+    } finally {
+      ollamaConnectBtn.disabled = false;
+      ollamaConnectBtn.innerText = 'Connect';
+    }
+  };
+}
+
 // Initialization
 initBtn.onclick = () => {
   initBtn.disabled = true;
-  modelSelect.disabled = true;
-  statusText.innerText = 'Initializing WebGPU Engine...';
-  worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
+  if (activeBackend === 'webgpu') {
+    modelSelect.disabled = true;
+    if (tabOllama) tabOllama.style.pointerEvents = 'none';
+    statusText.innerText = 'Initializing WebGPU Engine...';
+    worker.postMessage({ action: 'init', payload: { modelId: modelSelect.value } });
+  } else {
+    ollamaConnectBtn.disabled = true;
+    ollamaUrlInput.disabled = true;
+    ollamaModelSelect.disabled = true;
+    if (tabWebgpu) tabWebgpu.style.pointerEvents = 'none';
+    statusText.innerText = 'Connecting to Ollama...';
+    worker.postMessage({ 
+      action: 'init_ollama', 
+      payload: { 
+        ollamaUrl: ollamaUrlInput.value.trim(), 
+        modelId: ollamaModelSelect.value 
+      } 
+    });
+  }
 };
 
 // Graceful Cleanup

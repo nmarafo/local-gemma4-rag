@@ -760,3 +760,125 @@ footer strong {
     text-overflow: ellipsis;
 }
 
+/* Tabs for Setup */
+.setup-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 0.75rem;
+}
+
+.tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    background: rgba(187, 139, 255, 0.1);
+    border-color: rgba(187, 139, 255, 0.25);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Ollama Config styling */
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.input-group input {
+    flex-grow: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    color: #fff;
+    outline: none;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+    border-color: var(--accent);
+}
+
+.input-group button {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.input-group button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--accent);
+}
+
+.info-card {
+    background: rgba(187, 139, 255, 0.05);
+    border: 1px solid rgba(187, 139, 255, 0.15);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.info-card h4 {
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.info-card p {
+    margin-bottom: 0.5rem;
+}
+
+.info-card p:last-child {
+    margin-bottom: 0;
+}
+
+.code-block-mini {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    color: #e2e8f0;
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+

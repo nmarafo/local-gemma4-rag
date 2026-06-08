@@ -12,6 +12,9 @@ env.backends.onnx.wasm.proxy = false;
 let generatorPipeline = null;
 let embeddingPipeline = null;
 
+let isOllamaMode = false;
+let ollamaUrl = 'http://localhost:11434';
+
 const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
 let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX'; // Default
 
@@ -19,15 +22,22 @@ self.onmessage = async (e) => {
   const { action, payload } = e.data;
 
   if (action === 'init') {
+    isOllamaMode = false;
     if (payload && payload.modelId) {
         CURRENT_LLM_MODEL = payload.modelId;
     }
     await initModels();
+  } else if (action === 'init_ollama') {
+    await initOllama(payload);
   } else if (action === 'embed') {
     const vector = await embedText(payload.text);
     self.postMessage({ action: 'embed_result', payload: { vector } });
   } else if (action === 'generate') {
-    await generateResponse(payload.prompt, payload.context);
+    if (isOllamaMode) {
+      await generateResponseOllama(payload.prompt, payload.context);
+    } else {
+      await generateResponse(payload.prompt, payload.context);
+    }
   } else if (action === 'cleanup') {
     await cleanup();
   }
@@ -142,4 +152,89 @@ ${context}`;
 
   const finalResult = output[0].generated_text;
   self.postMessage({ action: 'generate_complete', payload: { text: finalResult } });
+}
+
+async function initOllama(payload) {
+  isOllamaMode = true;
+  ollamaUrl = payload.ollamaUrl || 'http://localhost:11434';
+  CURRENT_LLM_MODEL = payload.modelId;
+
+  self.postMessage({ action: 'status', payload: { text: `Connecting to Ollama & loading Local Embedding Model...`, progress: 10 } });
+
+  // Load embedding pipeline locally so Orama works in-browser
+  if (!embeddingPipeline) {
+    embeddingPipeline = await pipeline('feature-extraction', EMBEDDING_MODEL, {
+      device: 'webgpu',
+      progress_callback: (p) => {
+        if (p.status === 'progress') {
+          self.postMessage({ action: 'progress', payload: { model: 'embedding', progress: p.progress } });
+        }
+      }
+    });
+  }
+
+  self.postMessage({ action: 'status', payload: { text: `Ready with Ollama model ${CURRENT_LLM_MODEL}`, progress: 100 } });
+  self.postMessage({ action: 'ready' });
+}
+
+async function generateResponseOllama(userPrompt, context) {
+  try {
+    const isGeneralKnowledge = !context || context === 'No relevant context found in local documents.';
+    
+    const systemInstruction = isGeneralKnowledge 
+      ? "Eres un asistente de IA útil. Responde siempre en español. Responde usando tus propios conocimientos."
+      : `Eres un asistente experto. Responde siempre en español. Responde basándote en el siguiente contexto. Si la respuesta no está en el contexto, puedes usar tus propios conocimientos pero indica claramente que la información no se encontró en los documentos.
+IMPORTANTE: Si usas el contexto, debes citar el origen al final de cada afirmación usando este formato exacto: [Fuente 1], [Fuente 2].
+
+CONTEXTO:
+${context}`;
+
+    const finalPrompt = isGeneralKnowledge ? userPrompt : `CONTEXTO:\n${context}\n\nPREGUNTA:\n${userPrompt}`;
+
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: CURRENT_LLM_MODEL,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: finalPrompt }
+        ],
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama returned status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const json = JSON.parse(line);
+            if (json.message?.content) {
+              fullText += json.message.content;
+              self.postMessage({ action: 'chunk', payload: { text: fullText } });
+            }
+          } catch (err) {
+            console.warn("Error parsing Ollama chunk JSON:", err);
+          }
+        }
+      }
+    }
+
+    self.postMessage({ action: 'generate_complete', payload: { text: fullText } });
+  } catch (err) {
+    self.postMessage({ action: 'error', payload: { message: "Error communicating with Ollama: " + err.message } });
+  }
 }

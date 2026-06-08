@@ -380,6 +380,112 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* Tabs for Setup */
+        .setup-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 0.75rem;
+        }
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .tab-btn.active {
+            color: var(--accent);
+            background: rgba(187, 139, 255, 0.1);
+            border-color: rgba(187, 139, 255, 0.25);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Ollama Config styling */
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .input-group input {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.6rem 1rem;
+            color: #fff;
+            outline: none;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus {
+            border-color: var(--accent);
+        }
+        .input-group button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            color: var(--text);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .input-group button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent);
+        }
+        .info-card {
+            background: rgba(187, 139, 255, 0.05);
+            border: 1px solid rgba(187, 139, 255, 0.15);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .info-card h4 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .info-card p {
+            margin-bottom: 0.5rem;
+        }
+        .info-card p:last-child {
+            margin-bottom: 0;
+        }
+        .code-block-mini {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.78rem;
+            color: #e2e8f0;
+            margin: 0.5rem 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -394,27 +500,70 @@
             <div id="setup-container" class="card glass">
                 <div class="status-box">
                     <h2 id="status-text">Initialize AI Engine</h2>
-                    <p class="status-label">Downloads Models 100% in-browser. Fast inference via WebGPU.</p>
+                    <p class="status-label" style="text-align: center;">Choose your local model execution backend</p>
                 </div>
-                
-                <div class="status-grid">
-                    <div class="status-item">
-                        <div class="status-label">Embedding (MiniLM-L6)</div>
-                        <div class="progress-bar-container"><div id="progress-embedding" class="progress-fill"></div></div>
+
+                <div class="setup-tabs">
+                    <button class="tab-btn active" id="tab-webgpu">WebGPU (Navegador)</button>
+                    <button class="tab-btn" id="tab-ollama">Ollama (Servidor Local)</button>
+                </div>
+
+                <!-- WebGPU Tab Content -->
+                <div id="content-webgpu" class="tab-content active">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-label">Embedding (MiniLM-L6)</div>
+                            <div class="progress-bar-container"><div id="progress-embedding" class="progress-fill"></div></div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Gemma 4 Multimodal</div>
+                            <div class="progress-bar-container"><div id="progress-llm" class="progress-fill"></div></div>
+                        </div>
                     </div>
-                    <div class="status-item">
-                        <div class="status-label">Gemma 4 Multimodal</div>
-                        <div class="progress-bar-container"><div id="progress-llm" class="progress-fill"></div></div>
+                    <div class="model-selector-container">
+                        <label for="model-select" class="status-label">Select Model Variant:</label>
+                        <select id="model-select" class="glass-select">
+                            <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Audio/Vision Support)</option>
+                            <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - Slower, Audio/Vision Support)</option>
+                            <option value="onnx-community/gemma-4-12B-it-ONNX">Gemma 4 12B (12B - Ultra Quality, needs 16GB+ VRAM, experimental)</option>
+                        </select>
+                        <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B requires ~4GB. 12B is experimental and may exceed browser VRAM allocations.</p>
                     </div>
                 </div>
-                <div class="model-selector-container">
-                    <label for="model-select" class="status-label">Select Model Variant:</label>
-                    <select id="model-select" class="glass-select">
-                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Audio/Vision Support)</option>
-                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - Slower, Audio/Vision Support)</option>
-                    </select>
+
+                <!-- Ollama Tab Content -->
+                <div id="content-ollama" class="tab-content">
+                    <p class="status-label" style="text-align: center; margin-bottom: 1.25rem;">
+                        Run models locally using Ollama with full hardware acceleration and MTP.
+                    </p>
+                    
+                    <div class="input-group">
+                        <input type="text" id="ollama-url-input" value="http://localhost:11434" placeholder="Ollama server URL (e.g. http://localhost:11434)">
+                        <button id="ollama-connect-btn">Connect</button>
+                    </div>
+
+                    <div class="model-selector-container">
+                        <label for="ollama-model-select" class="status-label">Select local Ollama model:</label>
+                        <select id="ollama-model-select" class="glass-select" disabled>
+                            <option value="">Click 'Connect' to fetch local models...</option>
+                        </select>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>💡 Gemma 4 Speculative Decoding (MTP)</h4>
+                        <p>To run Gemma 4 12B faster with speculative decoding, create a model with the <code>draft_num_predict</code> parameter. Create a local <code>Modelfile</code>:</p>
+                        <div class="code-block-mini">FROM gemma4:12b
+PARAMETER draft_num_predict 4</div>
+                        <p>Compile it in your terminal:</p>
+                        <div class="code-block-mini">ollama create gemma4-mtp -f ./Modelfile</div>
+                        <p style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.85;">
+                            <strong>CORS Note:</strong> If connection fails, restart Ollama with origins allowed:<br>
+                            <code>$env:OLLAMA_ORIGINS="*" ; ollama serve</code>
+                        </p>
+                    </div>
                 </div>
-                <button id="init-btn" class="primary-btn">Initialize Local AI Engine</button>
+
+                <button id="init-btn" class="primary-btn" style="margin-top: 1.5rem;">Initialize Local AI Engine</button>
                 <p id="error-message" class="error-text" style="display: none;"></p>
             </div>
             <div id="chat-container" class="hidden">
@@ -535,6 +684,8 @@
             let model = null;
             let embeddingPipeline = null;
             let CURRENT_LLM_MODEL = 'onnx-community/gemma-4-E2B-it-ONNX';
+            let isOllamaMode = false;
+            let ollamaUrl = 'http://localhost:11434';
 
             self.onerror = (e) => {
                 self.postMessage({ action: 'error', payload: { message: "Worker Global Error: " + e.message + ". TIP: If on file://, use a server." } });
@@ -544,6 +695,7 @@
                 const { action, payload } = e.data;
                 try {
                     if (action === 'init') {
+                        isOllamaMode = false;
                         if (payload?.modelId) CURRENT_LLM_MODEL = payload.modelId;
                         self.postMessage({ action: 'status', payload: { text: 'Waking up AI Engine...' } });
                         
@@ -561,11 +713,35 @@
                         env.useBrowserCache = true;
                         
                         await initModels();
+                    } else if (action === 'init_ollama') {
+                        isOllamaMode = true;
+                        ollamaUrl = payload.ollamaUrl || 'http://localhost:11434';
+                        CURRENT_LLM_MODEL = payload.modelId;
+                        self.postMessage({ action: 'status', payload: { text: 'Connecting to Ollama & loading Local Embedding Model...' } });
+                        
+                        // --- DYNAMIC ESM IMPORT ---
+                        if (!Transformers) {
+                            try {
+                                Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
+                            } catch (err) {
+                                throw new Error("Security policy blocked Transformers.js. Please use a local server like Live Server.");
+                            }
+                        }
+                        
+                        const { env } = Transformers;
+                        env.allowLocalModels = false;
+                        env.useBrowserCache = true;
+                        
+                        await initOllama();
                     } else if (action === 'embed') {
                         const output = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
                         self.postMessage({ action: 'embed_result', payload: { vector: Array.from(output.data) } });
                     } else if (action === 'generate') {
-                        await generateResponse(payload.prompt, payload.context, payload.mediaItems);
+                        if (isOllamaMode) {
+                            await generateResponseOllama(payload.prompt, payload.context, payload.mediaItems);
+                        } else {
+                            await generateResponse(payload.prompt, payload.context, payload.mediaItems);
+                        }
                     } else if (action === 'cleanup') {
                         if (model) await model.dispose();
                         if (embeddingPipeline) await embeddingPipeline.dispose();
@@ -594,6 +770,16 @@
                     progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'llm', progress: p.progress } }); }
                 });
 
+                self.postMessage({ action: 'ready' });
+            }
+
+            async function initOllama() {
+                const { pipeline } = Transformers;
+                self.postMessage({ action: 'status', payload: { text: 'Loading Embedding Model...' } });
+                embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
+                    device: 'webgpu',
+                    progress_callback: (p) => { if(p.status === 'progress') self.postMessage({ action: 'progress', payload: { model: 'embedding', progress: p.progress } }); }
+                });
                 self.postMessage({ action: 'ready' });
             }
 
@@ -664,6 +850,73 @@
                     self.postMessage({ action: 'error', payload: { message: "Generation error: " + err.message } });
                 }
             }
+
+            async function generateResponseOllama(userPrompt, context, mediaItems = []) {
+                try {
+                    const isGeneral = !context || context.includes('No context');
+                    const sysPrompt = "Eres un asistente experto. Responde siempre en español. Si el usuario hace referencia a un documento y tienes 'CONTEXTO DEL DOCUMENTO' en el mensaje, asume que ese es el documento y responde basándote ÚNICAMENTE en él. NUNCA le pidas que adjunte un documento si ya tienes contexto.\\n\\nIMPORTANTE: Si usas el contexto, debes citar el origen al final de cada afirmación usando este formato: [Fuente 1], [Fuente 2].";
+
+                    let finalUserText = userPrompt || "Describe the contents of this file.";
+                    if (!isGeneral) {
+                        finalUserText = "CONTEXTO DEL DOCUMENTO:\\n" + context + "\\n\\nINSTRUCCIÓN DEL USUARIO:\\n" + finalUserText;
+                    }
+
+                    // Process images for Ollama
+                    let images = [];
+                    for (const media of mediaItems) {
+                        if (media.type === 'image') {
+                            const base64 = media.data.split(',')[1];
+                            images.push(base64);
+                        }
+                    }
+
+                    const requestBody = {
+                        model: CURRENT_LLM_MODEL,
+                        messages: [
+                            { role: 'system', content: sysPrompt },
+                            { role: 'user', content: finalUserText, ...(images.length > 0 && { images }) }
+                        ],
+                        stream: true
+                    };
+
+                    const response = await fetch(ollamaUrl + "/api/chat", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    if (!response.ok) throw new Error("Ollama error: status " + response.status);
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullText = "";
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\\n');
+                        for (const line of lines) {
+                            if (line.trim()) {
+                                try {
+                                    const json = JSON.parse(line);
+                                    if (json.message?.content) {
+                                        fullText += json.message.content;
+                                        self.postMessage({ action: 'chunk', payload: { text: fullText } });
+                                    }
+                                } catch (err) {
+                                    // Ignore partial lines
+                                }
+                            }
+                        }
+                    }
+
+                    self.postMessage({ action: 'generate_complete', payload: { text: fullText } });
+                } catch (err) {
+                    self.postMessage({ action: 'error', payload: { message: "Error communicating with Ollama: " + err.message } });
+                }
+            }
         `;
         const blob = new Blob([workerBlobCode], { type: 'application/javascript' });
         const worker = new Worker(URL.createObjectURL(blob), { type: 'module' });
@@ -685,10 +938,99 @@
         let isReady = false;
         let activeMediaAttachments = [];
         let currentChatSources = [];
+        let activeBackend = 'webgpu';
+
+        const tabWebgpu = document.getElementById('tab-webgpu');
+        const tabOllama = document.getElementById('tab-ollama');
+        const contentWebgpu = document.getElementById('content-webgpu');
+        const contentOllama = document.getElementById('content-ollama');
+
+        const ollamaConnectBtn = document.getElementById('ollama-connect-btn');
+        const ollamaUrlInput = document.getElementById('ollama-url-input');
+        const ollamaModelSelect = document.getElementById('ollama-model-select');
+
+        tabWebgpu.onclick = () => {
+            activeBackend = 'webgpu';
+            tabWebgpu.classList.add('active');
+            tabOllama.classList.remove('active');
+            contentWebgpu.classList.add('active');
+            contentOllama.classList.remove('active');
+            initBtn.disabled = false;
+            statusText.innerText = 'Initialize WebGPU AI';
+        };
+
+        tabOllama.onclick = () => {
+            activeBackend = 'ollama';
+            tabOllama.classList.add('active');
+            tabWebgpu.classList.remove('active');
+            contentOllama.classList.add('active');
+            contentWebgpu.classList.remove('active');
+            
+            if (!ollamaModelSelect.value) {
+                initBtn.disabled = true;
+                statusText.innerText = 'Please connect to local Ollama and select a model.';
+            } else {
+                initBtn.disabled = false;
+                statusText.innerText = 'Initialize Ollama Local AI';
+            }
+        };
+
+        ollamaConnectBtn.onclick = async () => {
+            const url = ollamaUrlInput.value.trim();
+            ollamaConnectBtn.disabled = true;
+            ollamaConnectBtn.innerText = 'Connecting...';
+            try {
+                const res = await fetch(`${url}/api/tags`);
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+                const data = await res.json();
+                
+                ollamaModelSelect.innerHTML = '';
+                if (data.models && data.models.length > 0) {
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.name;
+                        option.innerText = `${model.name} (${model.details?.parameter_size || 'Unknown size'})`;
+                        ollamaModelSelect.appendChild(option);
+                    });
+                    ollamaModelSelect.disabled = false;
+                    initBtn.disabled = false;
+                    statusText.innerText = 'Connected to Ollama. Click Initialize to start.';
+                } else {
+                    ollamaModelSelect.innerHTML = '<option value="">No models found. Run "ollama pull gemma4:12b"</option>';
+                    ollamaModelSelect.disabled = true;
+                    initBtn.disabled = true;
+                    statusText.innerText = 'Ollama connected, but no models found.';
+                }
+            } catch (err) {
+                alert(`Could not connect to Ollama at ${url}: ${err.message}. Make sure Ollama is running and OLLAMA_ORIGINS="*" is set.`);
+                statusText.innerText = 'Connection to Ollama failed.';
+            } finally {
+                ollamaConnectBtn.disabled = false;
+                ollamaConnectBtn.innerText = 'Connect';
+            }
+        };
 
         initBtn.onclick = () => {
             initBtn.disabled = true; errorMessage.style.display='none';
-            worker.postMessage({ action: 'init', payload: { modelId: document.getElementById('model-select').value } });
+            if (activeBackend === 'webgpu') {
+                document.getElementById('model-select').disabled = true;
+                tabOllama.style.pointerEvents = 'none';
+                statusText.innerText = 'Initializing WebGPU Engine...';
+                worker.postMessage({ action: 'init', payload: { modelId: document.getElementById('model-select').value } });
+            } else {
+                ollamaConnectBtn.disabled = true;
+                ollamaUrlInput.disabled = true;
+                ollamaModelSelect.disabled = true;
+                tabWebgpu.style.pointerEvents = 'none';
+                statusText.innerText = 'Connecting to Ollama...';
+                worker.postMessage({ 
+                    action: 'init_ollama', 
+                    payload: { 
+                        ollamaUrl: ollamaUrlInput.value.trim(), 
+                        modelId: ollamaModelSelect.value 
+                    } 
+                });
+            }
         };
 
         window.addEventListener('beforeunload', () => {

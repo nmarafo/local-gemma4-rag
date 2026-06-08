@@ -47,34 +47,75 @@
             <div id="setup-container" class="card glass">
                 <div class="status-box">
                     <h2 id="status-text">Initialize AI Engine</h2>
-                    <p class="status-label">Ready to load ~1.6GB of optimized models to your GPU</p>
+                    <p class="status-label" style="text-align: center;">Choose your local model execution backend</p>
                 </div>
-                
-                <div class="status-grid">
-                    <div class="status-item" id="status-embedding">
-                        <div class="status-label">Embedding (MiniLM-L6)</div>
-                        <div class="progress-bar-container">
-                            <div id="progress-embedding" class="progress-fill"></div>
+
+                <div class="setup-tabs">
+                    <button class="tab-btn active" id="tab-webgpu">WebGPU (Navegador)</button>
+                    <button class="tab-btn" id="tab-ollama">Ollama (Servidor Local)</button>
+                </div>
+
+                <!-- WebGPU Tab Content -->
+                <div id="content-webgpu" class="tab-content active">
+                    <div class="status-grid">
+                        <div class="status-item" id="status-embedding">
+                            <div class="status-label">Embedding (MiniLM-L6)</div>
+                            <div class="progress-bar-container">
+                                <div id="progress-embedding" class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div class="status-item" id="status-llm">
+                            <div class="status-label">Gemma 4 (Q4_K_M)</div>
+                            <div class="progress-bar-container">
+                                <div id="progress-llm" class="progress-fill"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="status-item" id="status-llm">
-                        <div class="status-label">Gemma 4 (Q4_K_M)</div>
-                        <div class="progress-bar-container">
-                            <div id="progress-llm" class="progress-fill"></div>
-                        </div>
+
+                    <div class="model-selector-container">
+                        <label for="model-select" class="status-label">Select Model Variant:</label>
+                        <select id="model-select" class="glass-select">
+                            <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
+                            <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
+                            <option value="onnx-community/gemma-4-12B-it-ONNX">Gemma 4 12B (12B - Ultra Quality, needs 16GB+ VRAM, experimental)</option>
+                        </select>
+                        <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B requires ~4GB. 12B is experimental and may exceed browser VRAM allocations.</p>
                     </div>
                 </div>
 
-                <div class="model-selector-container">
-                    <label for="model-select" class="status-label">Select Model Variant:</label>
-                    <select id="model-select" class="glass-select">
-                        <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B - Fast, Recommended)</option>
-                        <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B - High Quality, needs 6GB+ VRAM)</option>
-                    </select>
-                    <p class="hint" style="margin-top: 0.5rem; text-align: center;">4B variant requires significant GPU memory (~4GB download).</p>
+                <!-- Ollama Tab Content -->
+                <div id="content-ollama" class="tab-content">
+                    <p class="status-label" style="text-align: center; margin-bottom: 1.25rem;">
+                        Run models locally using Ollama with full hardware acceleration and MTP.
+                    </p>
+                    
+                    <div class="input-group">
+                        <input type="text" id="ollama-url-input" value="http://localhost:11434" placeholder="Ollama server URL (e.g. http://localhost:11434)">
+                        <button id="ollama-connect-btn">Connect</button>
+                    </div>
+
+                    <div class="model-selector-container">
+                        <label for="ollama-model-select" class="status-label">Select local Ollama model:</label>
+                        <select id="ollama-model-select" class="glass-select" disabled>
+                            <option value="">Click 'Connect' to fetch local models...</option>
+                        </select>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>💡 Gemma 4 Speculative Decoding (MTP)</h4>
+                        <p>To run Gemma 4 12B faster with speculative decoding, create a model with the <code>draft_num_predict</code> parameter. Create a local <code>Modelfile</code>:</p>
+                        <div class="code-block-mini">FROM gemma4:12b
+PARAMETER draft_num_predict 4</div>
+                        <p>Compile it in your terminal:</p>
+                        <div class="code-block-mini">ollama create gemma4-mtp -f ./Modelfile</div>
+                        <p style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.85;">
+                            <strong>CORS Note:</strong> If connection fails, restart Ollama with origins allowed:<br>
+                            <code>$env:OLLAMA_ORIGINS="*" ; ollama serve</code>
+                        </p>
+                    </div>
                 </div>
 
-                <button id="init-btn" class="primary-btn">Initialize WebGPU AI</button>
+                <button id="init-btn" class="primary-btn" style="margin-top: 1.5rem;">Initialize Local AI Engine</button>
                 <p id="error-message" class="error-text" style="display: none;"></p>
             </div>
 
