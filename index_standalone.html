@@ -557,8 +557,9 @@ PARAMETER draft_num_predict 4</div>
                         <p>Compile it in your terminal:</p>
                         <div class="code-block-mini">ollama create gemma4-mtp -f ./Modelfile</div>
                         <p style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.85;">
-                            <strong>CORS Note:</strong> If connection fails, restart Ollama with origins allowed:<br>
-                            <code>$env:OLLAMA_ORIGINS="*" ; ollama serve</code>
+                            <strong>CORS / Hugging Face Note:</strong> If connection fails:<br>
+                            1. Restart Ollama with origins allowed: <code>$env:OLLAMA_ORIGINS="*" ; ollama serve</code><br>
+                            2. On Hugging Face, open the <strong>Direct Space URL</strong> (three dots &rarr; <em>Embed this Space</em> &rarr; <em>Direct URL</em>) and allow <strong>Insecure content</strong> in browser site settings to bypass Mixed Content blocking.
                         </p>
                     </div>
                 </div>
